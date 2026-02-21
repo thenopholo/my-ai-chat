@@ -6,12 +6,12 @@ A simple FastAPI server with a `/chat` endpoint.
 
 1. Install dependencies:
 ```bash
-pip install -r requirements.txt
+uv sync
 ```
 
 2. Run the server:
 ```bash
-uvicorn main:app --reload
+uv run uvicorn main:app --reload
 ```
 
 The server will be available at http://localhost:8000

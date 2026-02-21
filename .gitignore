@@ -68,3 +68,6 @@
 **/.DS_Store
 **/*.sublime-workspace
 **/*.sublime-project
+
+# AI Instructions
+.cursor/

@@ -1,0 +1,58 @@
+[project]
+name = "my-ai-chat-backend"
+version = "0.1.0"
+requires-python = ">=3.10,<3.14"
+
+dependencies = [
+    "fastapi==0.110.0",
+    "uvicorn==0.27.1",
+    "pydantic==2.11.0",
+    "openai==1.66.3",
+    "python-dotenv==1.0.1",
+    "crayonai-stream==0.6.2",
+    "thesys-genui-sdk==0.1.2",
+]
+
+[tool.ruff]
+line-length = 79
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".gitignore",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "__pycache__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+    "alembic",
+    "migrations",
+]
+
+[tool.ruff.lint]
+preview = true
+select = ['I', 'F', 'E', 'W', 'PL', 'PT']
+ignore = ['PLR2004', 'PLR0917', 'PLR0913']
+
+[tool.ruff.format]
+preview = true
+quote-style = 'single'

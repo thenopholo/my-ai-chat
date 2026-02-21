@@ -1,11 +1,11 @@
 from openai.types.chat import ChatCompletionMessageParam
-from typing import Dict, List, Optional, TypeAlias, TypedDict
+from typing import TypeAlias, TypedDict
 
 
 # Message structure: holds an OpenAI message object and an optional ID
 class Message(TypedDict):
     openai_message: ChatCompletionMessageParam
-    id: Optional[str]
+    id: str | None
 
 
 ThreadId: TypeAlias = str
@@ -20,9 +20,11 @@ class ThreadStore:
     def __init__(self):
         """Initializes an empty store for threads."""
         # Store now holds the new Message structure
-        self._thread_store: Dict[ThreadId, List[Message]] = {}
+        self._thread_store: dict[ThreadId, list[Message]] = {}
 
-    def get_messages(self, thread_id: ThreadId) -> List[ChatCompletionMessageParam]:
+    def get_messages(
+        self, thread_id: ThreadId
+    ) -> list[ChatCompletionMessageParam]:
         """
         Retrieves all messages for a given thread ID, extracting the base OpenAI
         message object required for the API call.
@@ -50,7 +52,7 @@ class ThreadStore:
             self._thread_store[thread_id] = []
         self._thread_store[thread_id].append(message)
 
-    def append_messages(self, thread_id: ThreadId, messages: List[Message]):
+    def append_messages(self, thread_id: ThreadId, messages: list[Message]):
         """
         Appends multiple messages (in the new Message structure) to the specified thread.
         If the thread doesn't exist, it's created.
