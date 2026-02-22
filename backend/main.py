@@ -1,8 +1,7 @@
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
-from llm_runner import generate_stream, ChatRequest
 from thesys_genui_sdk.fast_api import with_c1_response
 
+from llm_runner import ChatRequest, generate_stream
 
 app = FastAPI()
 

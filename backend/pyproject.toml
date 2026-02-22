@@ -7,10 +7,13 @@ dependencies = [
     "fastapi==0.110.0",
     "uvicorn==0.27.1",
     "pydantic==2.11.0",
-    "openai==1.66.3",
     "python-dotenv==1.0.1",
     "crayonai-stream==0.6.2",
     "thesys-genui-sdk==0.1.2",
+    "ruff>=0.15.2",
+    "langchain>=0.3",
+    "langchain-core>=0.3",
+    "langchain-openai>=0.3",
 ]
 
 [tool.ruff]

@@ -1,10 +1,11 @@
-from openai.types.chat import ChatCompletionMessageParam
 from typing import TypeAlias, TypedDict
 
+from langchain_core.messages import BaseMessage
 
-# Message structure: holds an OpenAI message object and an optional ID
+
+# Estrutura de mensagem: contém um BaseMessage do LangChain e um ID opcional
 class Message(TypedDict):
-    openai_message: ChatCompletionMessageParam
+    lc_message: BaseMessage
     id: str | None
 
 
@@ -13,53 +14,52 @@ ThreadId: TypeAlias = str
 
 class ThreadStore:
     """
-    Manages storage and retrieval of chat messages associated with thread IDs.
-    Messages are stored internally as the Message TypedDict structure.
+    Gerencia armazenamento e recuperação de mensagens de chat
+    associadas a IDs de thread.
+    Mensagens são armazenadas internamente como o TypedDict Message.
     """
 
-    def __init__(self):
-        """Initializes an empty store for threads."""
-        # Store now holds the new Message structure
+    def __init__(self) -> None:
+        """Inicializa um store vazio para threads."""
         self._thread_store: dict[ThreadId, list[Message]] = {}
 
-    def get_messages(
-        self, thread_id: ThreadId
-    ) -> list[ChatCompletionMessageParam]:
+    def get_messages(self, thread_id: ThreadId) -> list[BaseMessage]:
         """
-        Retrieves all messages for a given thread ID, extracting the base OpenAI
-        message object required for the API call.
+        Recupera todas as mensagens de uma thread,
+        extraindo o BaseMessage do LangChain.
 
         Args:
-            thread_id: The ID of the thread to retrieve messages for.
+            thread_id: O ID da thread.
 
         Returns:
-            A list of messages compatible with ChatCompletionMessageParam.
+            Lista de BaseMessage compatível com o LangChain.
         """
         stored_messages = self._thread_store.get(thread_id, [])
-        # Extract the 'openai_message' part for the OpenAI API
-        return [msg['openai_message'] for msg in stored_messages]
+        return [msg['lc_message'] for msg in stored_messages]
 
-    def append_message(self, thread_id: ThreadId, message: Message):
+    def append_message(self, thread_id: ThreadId, message: Message) -> None:
         """
-        Appends a single message (in the new Message structure) to the specified thread.
-        If the thread doesn't exist, it's created.
+        Adiciona uma mensagem à thread especificada.
+        Se a thread não existir, ela é criada.
 
         Args:
-            thread_id: The ID of the thread to append the message to.
-            message: The message object (conforming to the Message TypedDict) to append.
+            thread_id: O ID da thread.
+            message: O objeto Message a ser adicionado.
         """
         if thread_id not in self._thread_store:
             self._thread_store[thread_id] = []
         self._thread_store[thread_id].append(message)
 
-    def append_messages(self, thread_id: ThreadId, messages: list[Message]):
+    def append_messages(
+        self, thread_id: ThreadId, messages: list[Message]
+    ) -> None:
         """
-        Appends multiple messages (in the new Message structure) to the specified thread.
-        If the thread doesn't exist, it's created.
+        Adiciona múltiplas mensagens à thread especificada.
+        Se a thread não existir, ela é criada.
 
         Args:
-            thread_id: The ID of the thread to append messages to.
-            messages: A list of message objects (conforming to the Message TypedDict) to append.
+            thread_id: O ID da thread.
+            messages: Lista de objetos Message a serem adicionados.
         """
         if thread_id not in self._thread_store:
             self._thread_store[thread_id] = []

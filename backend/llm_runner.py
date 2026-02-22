@@ -1,95 +1,85 @@
-from pydantic import BaseModel
-from typing import (
-    TypedDict,
-    Literal,
-)
 import os
-from openai import OpenAI
+import traceback
+from typing import (
+    Literal,
+    TypedDict,
+)
+
 from dotenv import load_dotenv  # type: ignore
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_openai import ChatOpenAI
+from pydantic import BaseModel, ConfigDict
+from thesys_genui_sdk.context import (  # type: ignore[import-untyped]
+    get_assistant_message,
+    write_content,
+)
 
 from thread_store import Message, thread_store
-from openai.types.chat import (
-    ChatCompletionMessageParam,
-    ChatCompletionAssistantMessageParam,
-    ChatCompletionUserMessageParam,
-)
-from thesys_genui_sdk.context import get_assistant_message, write_content  # type: ignore[import-untyped]
 
 _ = load_dotenv()
 
-# define the client
-client = OpenAI(
-    api_key=os.getenv('THESYS_API_KEY'),
+C1_MODEL: str = os.getenv(
+    'C1_MODEL', 'c1/anthropic/claude-sonnet-4/v-20250815'
+)
+
+# ChatOpenAI apontando para a API Thesys (C1 DSL nativo)
+llm = ChatOpenAI(
+    api_key=os.getenv('THESYS_API_KEY'),  # type: ignore[arg-type]
     base_url='https://api.thesys.dev/v1/embed',
+    model=C1_MODEL,
+    streaming=True,
 )
 
 
-# define the prompt type in request
+# Define o tipo de prompt no request
 class Prompt(TypedDict):
     role: Literal['user']
     content: str
     id: str
 
 
-# define the request type
+# Define o tipo do request
 class ChatRequest(BaseModel):
+    model_config = ConfigDict(extra='allow')
+
     prompt: Prompt
     threadId: str
     responseId: str
 
-    class Config:
-        extra: str = 'allow'  # Allow extra fields
 
+async def generate_stream(chat_request: ChatRequest) -> None:
+    """Gera resposta via streaming usando LangChain ChatOpenAI."""
+    try:
+        conversation_history = thread_store.get_messages(chat_request.threadId)
 
-async def generate_stream(chat_request: ChatRequest):
-    conversation_history: list[ChatCompletionMessageParam] = (
-        thread_store.get_messages(chat_request.threadId)
-    )
-
-    user_message: ChatCompletionUserMessageParam = {
-        'role': 'user',
-        'content': chat_request.prompt['content'],
-    }
-    conversation_history.append(user_message)
-    thread_store.append_message(
-        chat_request.threadId,
-        Message(openai_message=user_message, id=chat_request.prompt['id']),
-    )
-
-    assistant_message_for_history: (
-        ChatCompletionAssistantMessageParam | None
-    ) = None
-
-    stream = client.chat.completions.create(
-        messages=conversation_history,
-        model='c1/anthropic/claude-sonnet-4/v-20250815',
-        stream=True,
-    )
-
-    for chunk in stream:
-        delta = chunk.choices[0].delta
-        finish_reason = chunk.choices[0].finish_reason
-
-        if delta and delta.content:
-            await write_content(delta.content)
-
-        if finish_reason:
-            msg = get_assistant_message()
-            assistant_message_for_history = (
-                ChatCompletionAssistantMessageParam(
-                    role='assistant',
-                    content=msg['content'],
-                )
-            )
-
-    if assistant_message_for_history:
-        conversation_history.append(assistant_message_for_history)
-
-        # Store the assistant message with the responseId
+        user_message = HumanMessage(content=chat_request.prompt['content'])
+        conversation_history.append(user_message)
         thread_store.append_message(
             chat_request.threadId,
             Message(
-                openai_message=assistant_message_for_history,
-                id=chat_request.responseId,  # Assign responseId to the final assistant message
+                lc_message=user_message,
+                id=chat_request.prompt['id'],
             ),
         )
+
+        print(f'[LLM] Iniciando streaming - modelo: {C1_MODEL}')
+
+        async for chunk in llm.astream(conversation_history):
+            if isinstance(chunk.content, str) and chunk.content:
+                await write_content(chunk.content)
+
+        assistant_response = get_assistant_message()
+        assistant_message = AIMessage(content=assistant_response['content'])
+
+        conversation_history.append(assistant_message)
+        thread_store.append_message(
+            chat_request.threadId,
+            Message(
+                lc_message=assistant_message,
+                id=chat_request.responseId,
+            ),
+        )
+        print('[LLM] Streaming concluído com sucesso')
+    except Exception:
+        print('[LLM] ERRO em generate_stream:')
+        traceback.print_exc()
