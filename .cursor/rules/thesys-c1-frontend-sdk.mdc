@@ -1,0 +1,96 @@
+---
+globs: ui/src/**
+description: "SDK frontend Thesys C1 — componentes C1Chat, C1Component e integração com React."
+---
+# Thesys C1 — SDK Frontend
+
+## Objetivo
+
+Padronizar o uso dos SDKs `@thesysai/genui-sdk` e `@crayonai/react-ui` no frontend React.
+
+## Componentes Principais
+
+### `C1Chat` (all-in-one)
+
+- Componente completo de chat — gerencia UI, mensagens, streaming e threads internamente.
+- Aceita `apiUrl` apontando para o proxy do backend.
+- **Padrão atual do projeto** — ver [App.tsx](mdc:ui/src/App.tsx).
+
+```tsx
+import "@crayonai/react-ui/styles/index.css";
+import { C1Chat } from "@thesysai/genui-sdk";
+
+export default function App() {
+  return <C1Chat apiUrl="/api/chat" />;
+}
+```
+
+### `C1Component` + `ThemeProvider` (customizado)
+
+- Para UIs mais customizadas, onde se precisa controlar rendering de cada resposta.
+- `C1Component` renderiza uma resposta C1 individual.
+- `isStreaming` indica estado de loading/streaming.
+- `updateMessage` atualiza a resposta progressivamente.
+- `onAction` intercepta ações do usuário na UI gerada.
+
+```tsx
+import { ThemeProvider, C1Component } from "@thesysai/genui-sdk";
+
+<ThemeProvider>
+  <C1Component
+    c1Response={c1Response}
+    isStreaming={isLoading}
+    updateMessage={(message) => setC1Response(message)}
+    onAction={({ llmFriendlyMessage }) => {
+      makeApiCall(llmFriendlyMessage, c1Response);
+    }}
+  />
+</ThemeProvider>
+```
+
+Conforme documentação: https://docs.thesys.dev/guides/rendering-ui
+
+## C1Chat vs C1Component
+
+| Aspecto | `C1Chat` | `C1Component` |
+|---|---|---|
+| Complexidade | Simples (all-in-one) | Mais controle |
+| Gerenciamento de estado | Interno | Manual |
+| Streaming | Automático | Via props (`isStreaming`) |
+| Threads | Automático | Manual |
+| Quando usar | Chat padrão | UI customizada |
+
+## Estilos Obrigatórios
+
+- **Sempre** importar `@crayonai/react-ui/styles/index.css` no entry point.
+- Sem este import, os componentes do SDK não renderizam corretamente.
+- Import atual em [App.tsx](mdc:ui/src/App.tsx).
+
+## Proxy de Comunicação
+
+- Toda comunicação via proxy Vite: `/api/*` → `http://127.0.0.1:8000`.
+- `apiUrl="/api/chat"` no `C1Chat` — **nunca** acessar backend diretamente.
+- Rewrite remove `/api` antes de encaminhar ao backend.
+- Configuração em [vite.config.ts](mdc:ui/vite.config.ts).
+
+## Customização
+
+- Aparência via props dos componentes ou CSS override.
+- Para funcionalidades além do SDK, criar componentes wrapper.
+- Usar `ThemeProvider` para temas customizados quando usar `C1Component`.
+
+## Anti-padrões
+
+- ❌ Acessar backend diretamente (`http://localhost:8000/chat`) sem proxy.
+- ❌ Esquecer de importar `@crayonai/react-ui/styles/index.css`.
+- ❌ Misturar `C1Chat` e `C1Component` no mesmo fluxo sem necessidade.
+- ❌ Gerenciar streaming manualmente quando `C1Chat` já faz isso.
+- ❌ Colocar `apiUrl` com URL absoluta do backend.
+
+## Checklist
+
+- [ ] `C1Chat` ou `C1Component` importado de `@thesysai/genui-sdk`.
+- [ ] Estilos `@crayonai/react-ui/styles/index.css` importados.
+- [ ] `apiUrl` usando proxy (`/api/chat`), não URL direta.
+- [ ] Proxy Vite configurado em `vite.config.ts`.
+- [ ] `ThemeProvider` presente ao usar `C1Component`.

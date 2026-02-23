@@ -1,0 +1,66 @@
+---
+globs: backend/**/*.py
+---
+
+# Tratamento de Erros — Backend
+
+## Objetivo
+
+Garantir tratamento de erros consistente, informativo e seguro no backend, com respostas claras para o cliente e logs úteis para debugging.
+
+## Regras
+
+### Exceções Tipadas
+
+- Crie exceções customizadas para erros de domínio (ex.: `ThreadNotFoundError`, `LLMTimeoutError`).
+- Herde de `Exception` ou subclasses específicas (`ValueError`, `RuntimeError`).
+- Nunca use exceções genéricas (`Exception`) para erros de domínio.
+
+### Try/Except Granular
+
+- Blocos `try/except` devem ser **pequenos** — apenas o código que pode falhar.
+- Capture exceções **específicas**, nunca `except Exception` ou `except:` sem motivo.
+- Sempre logue a exceção com contexto antes de re-levantar ou tratar.
+
+### FastAPI Exception Handlers
+
+- Use `HTTPException` para erros que devem retornar status HTTP específico.
+- Registre exception handlers globais com `@app.exception_handler(ExcClass)` para respostas consistentes.
+- Formato de resposta de erro padronizado: `{"detail": "mensagem", "error_code": "CÓDIGO"}`.
+
+### Logging
+
+- Use o módulo `logging` (nunca `print()` para erros).
+- Logue com contexto: `logger.error("Falha ao gerar stream", exc_info=True, extra={"thread_id": tid})`.
+- Níveis: `DEBUG` para detalhes internos, `INFO` para operações normais, `WARNING` para situações inesperadas, `ERROR` para falhas, `CRITICAL` para falhas fatais.
+
+### Retry e Resiliência
+
+- Chamadas a LLMs/APIs externas devem ter **retry com backoff exponencial**.
+- Configure **timeouts** em todas as chamadas externas (OpenAI, APIs de terceiros).
+- Implemente **graceful degradation** — se o LLM falhar, retorne mensagem de fallback.
+
+### Erros de Streaming
+
+- Ao usar streaming (SSE), erros durante a geração devem ser comunicados ao cliente via evento de erro.
+- Não deixe streams abertos indefinidamente — implemente timeouts.
+- Logue erros de streaming com contexto do thread/request.
+
+## Anti-padrões
+
+- ❌ `except: pass` ou `except Exception: pass` (silenciar exceções).
+- ❌ Blocos `try/except` enormes englobando dezenas de linhas.
+- ❌ Retornar stack traces para o cliente em produção.
+- ❌ Logar dados sensíveis (API keys, tokens, PII) em mensagens de erro.
+- ❌ Chamadas externas sem timeout.
+- ❌ Ignorar erros em operações de streaming.
+
+## Checklist
+
+- [ ] Exceções customizadas para erros de domínio.
+- [ ] `try/except` granular com exceções específicas.
+- [ ] `HTTPException` para erros HTTP nos endpoints.
+- [ ] Logging estruturado com contexto (`exc_info`, `extra`).
+- [ ] Retry com backoff em chamadas a APIs externas.
+- [ ] Timeouts configurados em todas as chamadas externas.
+- [ ] Erros de streaming tratados e comunicados ao cliente.

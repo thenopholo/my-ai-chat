@@ -1,0 +1,102 @@
+---
+alwaysApply: true
+description: Padrões de commits semânticos e idioma do projeto.
+---
+
+# Commits e Idioma — Projeto
+
+## Objetivo
+
+Padronizar mensagens de commit, PRs e comunicação no repositório, usando commits semânticos em **pt-BR**.
+
+## Padrões de Commit
+
+### Formato
+
+```
+<tipo>(<escopo>): <descrição curta>
+
+<corpo explicando o quê e por quê (opcional)>
+
+<referências (opcional)>
+```
+
+### Tipos
+
+| Tipo | Uso |
+|---|---|
+| `feat` | Nova funcionalidade |
+| `fix` | Correção de bug |
+| `chore` | Tarefas de manutenção (deps, configs, CI) |
+| `docs` | Documentação |
+| `refactor` | Refatoração sem alterar comportamento |
+| `test` | Adição ou correção de testes |
+| `style` | Formatação, espaçamento (sem mudança de lógica) |
+| `perf` | Melhorias de performance |
+| `ci` | Configuração de CI/CD |
+| `build` | Mudanças no sistema de build |
+
+### Escopos Comuns
+
+- `backend` — código do backend Python.
+- `frontend` — código do frontend React.
+- `api` — endpoints e rotas.
+- `chat` — funcionalidades de chat.
+- `config` — configurações do projeto.
+- `deps` — dependências.
+
+## Exemplos Curtos
+
+```
+feat(chat): adiciona streaming de respostas do LLM
+
+Implementa SSE para enviar chunks de resposta em tempo real.
+Usa write_content() do thesys SDK para controle de fluxo.
+
+Refs: #12
+```
+
+```
+fix(backend): corrige timeout em chamadas ao OpenAI
+
+Adiciona timeout de 30s nas chamadas ao client OpenAI
+para evitar conexões penduradas.
+```
+
+```
+refactor(frontend): extrai hook useChat do App.tsx
+
+Move lógica de gerenciamento de chat para hook dedicado
+para melhorar separação de responsabilidades.
+```
+
+```
+chore(deps): atualiza pydantic para 2.11.0
+```
+
+```
+test(backend): adiciona testes para ThreadStore
+```
+
+## Regras
+
+- Título em **pt-BR**, imperativo, primeira letra minúscula após o tipo.
+- Máximo **72 caracteres** no título.
+- Corpo explica o **quê** e o **por quê** (não o como — o diff mostra isso).
+- Referência a issues/PRs quando aplicável (`Refs: #123`, `Closes: #456`).
+- Um commit = uma mudança lógica (não misturar feat + fix no mesmo commit).
+
+## Padrão para PRs
+
+- **Título**: mesmo formato de commit (`feat(chat): ...`).
+- **Descrição**: contexto, motivação, decisões tomadas, screenshots (se UI).
+- **Labels**: `backend`, `frontend`, `bug`, `feature`, `refactor`, etc.
+- Mantenha PRs pequenos e focados (máximo ~400 linhas).
+
+## Checklist
+
+- [ ] Commit segue formato semântico (`tipo(escopo): descrição`).
+- [ ] Título em pt-BR, imperativo, ≤ 72 caracteres.
+- [ ] Corpo explica o quê/por quê (quando necessário).
+- [ ] Referência a issues/PRs quando aplicável.
+- [ ] Um commit = uma mudança lógica.

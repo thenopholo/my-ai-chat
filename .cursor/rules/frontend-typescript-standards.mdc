@@ -1,0 +1,81 @@
+---
+alwaysApply: true
+description: Padrões de código TypeScript/React do projeto frontend.
+---
+
+# Padrões TypeScript/React — Frontend
+
+## Objetivo
+
+Garantir código TypeScript consistente, tipado e legível no frontend, alinhado ao `tsconfig.json` (`strict: true`) e ao ESLint configurado no projeto.
+
+## Regras
+
+### TypeScript Strict Mode
+
+- `strict: true` habilitado — ver [tsconfig.json](mdc:ui/tsconfig.json).
+- `noUnusedLocals: true` — variáveis locais não usadas geram erro.
+- `noUnusedParameters: true` — parâmetros não usados geram erro.
+- `noFallthroughCasesInSwitch: true` — switch/case sem break gera erro.
+- Target: `ES2020`, Module: `ESNext`, JSX: `react-jsx`.
+
+### Tipagem
+
+- **Nunca** use `any` — prefira `unknown`, generics ou tipos concretos.
+- Interfaces (`interface`) para props de componentes e contratos.
+- Types (`type`) para unions, intersections e aliases.
+- Exporte tipos usados por múltiplos módulos.
+- Use generics quando o tipo depende do contexto.
+
+### Naming Conventions
+
+- `PascalCase` para componentes React, interfaces, types e enums.
+- `camelCase` para funções, variáveis, hooks e propriedades.
+- `UPPER_SNAKE_CASE` para constantes.
+- Prefixo `use` para custom hooks (ex.: `useChat`, `useThread`).
+- Prefixo `I` **não** é necessário em interfaces (evite `IProps`, use `Props`).
+
+### Variáveis e Declarações
+
+- Use `const` por padrão; `let` quando reatribuição for necessária.
+- **Nunca** use `var`.
+- Destructuring para objetos e arrays quando melhora legibilidade.
+- Optional chaining (`?.`) e nullish coalescing (`??`) em vez de checks manuais.
+- Template literals em vez de concatenação de strings.
+
+### Imports
+
+- Ordem: React/React DOM → bibliotecas externas → componentes locais → hooks → tipos → estilos.
+- Sem imports wildcard (`import * as`), exceto para namespaces legítimos.
+- Remova imports não usados (`noUnusedLocals` garante isso).
+
+### ESLint
+
+- Configurado inline no [package.json](mdc:ui/package.json): `extends: ["react-app", "react-app/jest"]`.
+- Respeite todas as regras do preset `react-app`.
+- Não desabilite regras sem justificativa documentada.
+
+### Logs e Debug
+
+- Sem `console.log()` em código de produção.
+- Use `console.warn()` ou `console.error()` apenas para avisos/erros reais.
+- Remova todos os logs de debug antes de commitar.
+
+## Anti-padrões
+
+- ❌ Uso de `any`.
+- ❌ Uso de `var`.
+- ❌ `console.log()` em produção.
+- ❌ Imports não usados.
+- ❌ Variáveis não tipadas (`const x = ...` sem tipo quando ambíguo).
+- ❌ Desabilitar regras do ESLint/TypeScript sem justificativa.
+- ❌ Type assertions (`as`) desnecessárias.
+
+## Checklist
+
+- [ ] `strict: true` no `tsconfig.json`.
+- [ ] Sem `any` no código.
+- [ ] Naming conventions respeitadas (PascalCase, camelCase, UPPER_SNAKE_CASE).
+- [ ] Imports organizados e sem unused imports.
+- [ ] Sem `console.log()` em produção.
+- [ ] ESLint passando sem erros.

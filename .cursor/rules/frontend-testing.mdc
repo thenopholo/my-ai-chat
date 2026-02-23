@@ -1,0 +1,93 @@
+---
+globs: ui/src/**/*.test.ts,ui/src/**/*.test.tsx,ui/src/**/*.spec.ts,ui/src/**/*.spec.tsx,ui/tests/**,ui/__tests__/**
+---
+
+# Testes — Frontend
+
+## Objetivo
+
+Definir padrões de testes para o frontend React/TypeScript, garantindo cobertura e confiabilidade.
+
+> **Nota**: Atualmente o projeto **não possui testes configurados**. O `@testing-library/dom` está nas deps, mas sem framework de teste (Vitest ou Jest). Estas regras servem como guia para quando testes forem adicionados.
+
+## Setup Recomendado
+
+- **Vitest** como framework de testes (integra nativamente com Vite).
+- **@testing-library/react** para testar componentes.
+- **@testing-library/user-event** para simular interações.
+- **jsdom** como ambiente de DOM.
+
+```bash
+# Instalação
+npm install -D vitest @testing-library/react @testing-library/user-event @testing-library/jest-dom jsdom
+```
+
+Configuração em `vite.config.ts`:
+
+```typescript
+/// <reference types="vitest" />
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+  },
+});
+```
+
+## Regras
+
+### Tipos de Teste
+
+- **Unit tests**: funções utilitárias, hooks customizados.
+- **Component tests**: renderização, interação, estados visuais.
+- **Integration tests**: fluxos completos (ex.: enviar mensagem no chat).
+
+### Convenções
+
+- Arquivos de teste: `*.test.tsx` para componentes, `*.test.ts` para lógica pura.
+- Co-localize testes com o código (ou em `__tests__/` na mesma pasta).
+- Nomes descritivos: `describe('ChatMessage')`, `it('renderiza conteúdo da mensagem')`.
+
+### Testing Library
+
+- Busque elementos por papel (role), label ou texto — **não** por class ou ID.
+- Use `screen.getByRole()`, `screen.getByText()`, `screen.getByLabelText()`.
+- `userEvent` para interações (click, type, etc.) em vez de `fireEvent`.
+- Teste comportamento, não implementação.
+
+### Hooks
+
+- Teste hooks com `renderHook()` do `@testing-library/react`.
+- Mock de dependências (fetch, services) quando necessário.
+
+### Mocking
+
+- Mock de APIs: use `msw` (Mock Service Worker) para interceptar HTTP.
+- Mock de módulos: `vi.mock()` no Vitest.
+- Mock do SDK `C1Chat` quando testar componentes que o usam.
+- Mínimo de mocks — prefira integração quando possível.
+
+### Cobertura
+
+- Alvo mínimo: **80%** de cobertura.
+- Comando: `npx vitest --coverage`.
+- Foque em lógica crítica (services, hooks, componentes interativos).
+
+## Anti-padrões
+
+- ❌ Testes que dependem de detalhes de implementação (classes CSS, estrutura DOM).
+- ❌ Testes sem assertions.
+- ❌ Snapshot tests excessivos (preferir assertions explícitas).
+- ❌ Mock de tudo (invalida o teste).
+- ❌ Testes frágeis que quebram com refactoring cosmético.
+- ❌ Ignorar testes falhando.
+
+## Checklist
+
+- [ ] Vitest + Testing Library instalados e configurados.
+- [ ] Testes co-localizados com o código.
+- [ ] Elementos buscados por role/text/label (não class/ID).
+- [ ] `userEvent` para interações.
+- [ ] APIs mockadas com `msw` ou `vi.mock()`.
+- [ ] Cobertura mínima de 80%.

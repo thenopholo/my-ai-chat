@@ -1,0 +1,117 @@
+---
+globs: backend/**/*.py
+---
+
+# LangChain e LangGraph — Backend
+
+## Objetivo
+
+Definir padrões e boas práticas para a futura adoção de LangChain e LangGraph no backend, preparando a base para orquestração de agentes e chains de IA.
+
+> **Nota**: Atualmente o projeto usa OpenAI SDK diretamente (ver [llm_runner.py](mdc:backend/llm_runner.py)). Estas regras se aplicam quando a migração para LangChain/LangGraph for iniciada.
+
+## Regras LangChain
+
+### Chains (LCEL — LangChain Expression Language)
+
+- Use LCEL (`|` pipe operator) para compor chains: `prompt | model | parser`.
+- Prefira chains declarativas sobre classes imperativas.
+- Cada chain deve ter uma responsabilidade clara.
+
+### Prompts
+
+- Use `ChatPromptTemplate` para templates de prompts.
+- Separe `SystemMessage`, `HumanMessage`, `AIMessage`.
+- Armazene templates de prompts em módulos separados (`app/prompts/`).
+- Parametrize prompts com variáveis — nunca hardcode o texto completo.
+
+### Modelos
+
+- Configure modelos LLM de forma centralizada (factory ou settings).
+- Use `ChatOpenAI` (ou wrapper compatível) com parâmetros explícitos (`model`, `temperature`, `max_tokens`).
+- Defina timeouts e retries para chamadas ao LLM.
+
+### Output Parsers
+
+- Use output parsers para estruturar respostas do LLM (`StrOutputParser`, `JsonOutputParser`, `PydanticOutputParser`).
+- Valide output com Pydantic models quando possível.
+
+### Tools e Retrievers
+
+- Defina tools como funções com `@tool` decorator.
+- Docstrings claras nas tools (o LLM usa para decidir quando chamá-las).
+- Retrievers para RAG devem ser configuráveis e testáveis.
+
+### Memory/History
+
+- Use `ChatMessageHistory` ou equivalente para gerenciar histórico.
+- Integre com o `ThreadStore` existente ao migrar.
+
+## Regras LangGraph
+
+### Grafos (StateGraph)
+
+- Defina estado tipado com `TypedDict` ou `dataclass`.
+- Use `StateGraph` para definir fluxos de agentes.
+- Cada nó (node) deve ter uma responsabilidade única.
+- Nomes de nós descritivos (ex.: `generate_response`, `check_tools`, `summarize`).
+
+### Arestas (Edges)
+
+- Use conditional edges para branching baseado em estado.
+- Defina condições de transição como funções puras.
+- Evite grafos com muitos nós — decomponha em subgraphs.
+
+### Checkpointing
+
+- Configure checkpointing para persistir estado entre execuções.
+- Útil para conversas longas e workflows multi-step.
+
+### Padrões de Agentes
+
+- **ReAct**: para agentes que raciocinam e agem iterativamente.
+- **Plan-and-Execute**: para tarefas que requerem planejamento antes da execução.
+- **Multi-agent**: para orquestração de múltiplos agentes especializados.
+
+## Organização de Código
+
+```
+backend/app/agents/
+├── __init__.py
+├── chains.py          # Chains LCEL
+├── graphs.py          # StateGraphs LangGraph
+├── tools.py           # Tools para agentes
+├── nodes.py           # Funções de nós do grafo
+└── state.py           # Definições de estado tipado
+
+backend/app/prompts/
+├── __init__.py
+├── system_prompts.py  # System messages
+└── templates.py       # ChatPromptTemplates
+```
+
+## Patterns Recomendados
+
+- **Streaming**: use `.astream()` ou `.astream_events()` para streaming de respostas.
+- **Callbacks**: use callbacks para observabilidade (logging, tracing).
+- **Fallbacks**: configure `.with_fallbacks()` para resiliência.
+- **Rate limiting**: respeite rate limits dos provedores de LLM.
+
+## Anti-padrões
+
+- ❌ Chains monolíticas com toda a lógica em um único pipe.
+- ❌ Prompts hardcoded como strings literais espalhadas pelo código.
+- ❌ Ignorar tipagem do estado no LangGraph.
+- ❌ Nós de grafo com efeitos colaterais não controlados.
+- ❌ Misturar lógica de LangChain/LangGraph com lógica de FastAPI (endpoints).
+- ❌ Não configurar timeouts em chamadas ao LLM.
+
+## Checklist
+
+- [ ] Chains compostas com LCEL (pipe operator).
+- [ ] Prompts parametrizados e em módulos separados.
+- [ ] Estado do LangGraph tipado com `TypedDict`.
+- [ ] Nós com responsabilidade única e nomes descritivos.
+- [ ] Streaming configurado para respostas de chat.
+- [ ] Timeouts e retries configurados para chamadas LLM.
+- [ ] Observabilidade via callbacks.

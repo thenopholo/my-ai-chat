@@ -1,0 +1,116 @@
+---
+globs: "backend/**/*.py,ui/src/**"
+description: "Protocolo de streaming C1 — fluxo completo backend-frontend."
+---
+# Thesys C1 — Protocolo de Streaming
+
+## Objetivo
+
+Documentar o protocolo de streaming entre backend e frontend usando os SDKs C1.
+
+## Fluxo Completo
+
+```
+1. Frontend envia POST /api/chat
+   ↓
+2. Proxy Vite reescreve → POST /chat (backend)
+   ↓
+3. @with_c1_response() intercepta e prepara protocolo SSE
+   ↓
+4. LangChain .astream() inicia streaming da C1 API
+   ↓
+5. Para cada chunk: await write_content(chunk.content)
+   ↓
+6. SDK monta resposta progressivamente
+   ↓
+7. get_assistant_message() retorna resposta final
+   ↓
+8. Frontend (C1Chat) renderiza UI em tempo real
+```
+
+## Backend Protocol
+
+### Decorator `@with_c1_response()`
+
+- Gerencia o protocolo de resposta C1 (SSE, headers, formato).
+- **Nunca** enviar JSON bruto ou SSE manual quando usando este decorator.
+- O decorator controla o ciclo de vida da resposta.
+
+### `write_content()` — Envio de Chunks
+
+- Aceita strings (chunks de texto).
+- Chamar com `await` — é async.
+- Cada chamada envia um chunk ao frontend.
+- Verificar que o chunk não é vazio antes de enviar.
+
+```python
+async for chunk in llm.astream(conversation_history):
+    if isinstance(chunk.content, str) and chunk.content:
+        await write_content(chunk.content)
+```
+
+### `get_assistant_message()` — Resposta Final
+
+- Chamar **após** todo o streaming ser concluído.
+- Retorna `dict` com `'content'` contendo a resposta completa.
+- Usar para criar `AIMessage` e salvar no histórico.
+
+Referência: [llm_runner.py](mdc:backend/llm_runner.py).
+
+## Frontend Protocol
+
+### `C1Chat` — Streaming Automático
+
+- O `C1Chat` gerencia streaming automaticamente — sem configuração adicional.
+- Renderiza chunks progressivamente conforme chegam.
+- Exibe indicador de loading durante o streaming.
+
+### `C1Component` — Streaming Manual
+
+- Usar `isStreaming={true}` para indicar estado de loading.
+- `updateMessage` para atualizar a resposta progressivamente.
+- Ao final, setar `isStreaming={false}`.
+
+Referência: [App.tsx](mdc:ui/src/App.tsx).
+
+## Thread Management
+
+- Cada request inclui `threadId` e `responseId`.
+- `threadId` identifica a conversa.
+- `responseId` identifica a resposta individual.
+- `ThreadStore` mantém histórico de mensagens por thread (in-memory).
+- Mensagens armazenadas como `BaseMessage` do LangChain.
+
+Referência: [thread_store.py](mdc:backend/thread_store.py).
+
+## Error Handling
+
+- Configurar timeouts no LLM (`ChatOpenAI` timeout param).
+- Tratar erros de streaming graciosamente com try/except.
+- Logar erros com contexto (thread_id, modelo, etc.).
+- Não expor stack traces ao frontend.
+
+## Timeouts
+
+- Sugestão: 30s para chamadas ao LLM.
+- Implementar via `asyncio.timeout()` ou param `request_timeout` do `ChatOpenAI`.
+- Streams sem timeout são perigosos — podem pendurar conexões indefinidamente.
+
+## Anti-padrões
+
+- ❌ `StreamingResponse` manual junto com `@with_c1_response()`.
+- ❌ Enviar chunks sem verificar se são strings não-vazias.
+- ❌ Esquecer `get_assistant_message()` ao final do streaming.
+- ❌ Streams sem timeout.
+- ❌ Expor erros internos de streaming ao frontend.
+- ❌ Ignorar `threadId`/`responseId` do request.
+
+## Checklist
+
+- [ ] `@with_c1_response()` no endpoint.
+- [ ] `write_content()` com `await` para cada chunk.
+- [ ] `get_assistant_message()` ao final.
+- [ ] Timeouts configurados em chamadas ao LLM.
+- [ ] Erros de streaming tratados com try/except.
+- [ ] `threadId` e `responseId` processados corretamente.
+- [ ] Histórico mantido no `ThreadStore`.

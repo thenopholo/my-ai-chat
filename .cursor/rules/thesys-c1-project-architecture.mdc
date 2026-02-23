@@ -1,0 +1,118 @@
+---
+globs: "backend/**,ui/src/**"
+description: "Arquitetura full-stack do projeto Thesys C1 — fluxo de dados, separação de responsabilidades e evolução."
+---
+# Thesys C1 — Arquitetura do Projeto
+
+## Objetivo
+
+Documentar a arquitetura full-stack do projeto, o fluxo de dados entre backend e frontend, e o roadmap de evolução.
+
+## Diagrama de Arquitetura
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Frontend (React 19 + TypeScript + Vite 6)          │
+│  ┌───────────────────────────────────────────────┐  │
+│  │  C1Chat (@thesysai/genui-sdk)                 │  │
+│  │  + @crayonai/react-ui styles                  │  │
+│  └─────────────────┬─────────────────────────────┘  │
+│                    │ POST /api/chat                  │
+└────────────────────┼────────────────────────────────┘
+                     │ Proxy Vite (rewrite /api → /)
+┌────────────────────┼────────────────────────────────┐
+│  Backend (FastAPI + Python 3.13)                     │
+│  ┌─────────────────┴─────────────────────────────┐  │
+│  │  @with_c1_response() endpoint                 │  │
+│  │  ↓                                            │  │
+│  │  generate_stream() — LangChain ChatOpenAI     │  │
+│  │  ↓ .astream()                                 │  │
+│  │  write_content() → chunks ao frontend         │  │
+│  │  ↓                                            │  │
+│  │  get_assistant_message() → salvar histórico   │  │
+│  └───────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────────┐  │
+│  │  ThreadStore (in-memory)                      │  │
+│  │  BaseMessage do LangChain                     │  │
+│  └───────────────────────────────────────────────┘  │
+└─────────────────────┬───────────────────────────────┘
+                      │ HTTPS (streaming)
+┌─────────────────────┴───────────────────────────────┐
+│  C1 API (https://api.thesys.dev/v1/embed)           │
+│  OpenAI-compatible endpoint                          │
+└─────────────────────────────────────────────────────┘
+```
+
+## Fluxo de Request Detalhado
+
+1. **Frontend** (`C1Chat` ou fetch) envia `POST /api/chat` com `{ prompt, threadId, responseId }`.
+2. **Proxy Vite** (`/api/*`) reescreve e encaminha para `http://127.0.0.1:8000/chat`.
+3. **Backend** (`@with_c1_response()` endpoint) recebe `ChatRequest`.
+4. **generate_stream()** recupera histórico do `ThreadStore`.
+5. **LangChain** (`ChatOpenAI`) faz `.astream()` para a C1 API.
+6. Cada chunk é enviado via `write_content()`.
+7. `get_assistant_message()` monta resposta final.
+8. Resposta salva no `ThreadStore` como `AIMessage`.
+9. **Frontend** renderiza UI gerada progressivamente.
+
+## Separação de Responsabilidades
+
+### Backend
+
+- **Toda** a lógica de IA: chains, agents, tools, prompts.
+- Gerenciamento de threads e histórico.
+- Comunicação com a C1 API via LangChain.
+- Validação de input com Pydantic.
+- Streaming via SDK C1 (`write_content`, `get_assistant_message`).
+
+### Frontend
+
+- Renderização da UI gerada pelo C1.
+- Gerenciamento de interação do usuário.
+- Comunicação com backend via proxy.
+- **Não** contém lógica de IA ou acesso direto à C1 API.
+
+## Arquivos Atuais
+
+| Arquivo | Responsabilidade |
+|---|---|
+| [main.py](mdc:backend/main.py) | FastAPI app, endpoints, decorator C1 |
+| [llm_runner.py](mdc:backend/llm_runner.py) | ChatOpenAI, streaming, ChatRequest |
+| [thread_store.py](mdc:backend/thread_store.py) | Armazenamento de threads in-memory |
+| [App.tsx](mdc:ui/src/App.tsx) | Componente raiz com C1Chat |
+| [index.tsx](mdc:ui/src/index.tsx) | Entry point React |
+| [vite.config.ts](mdc:ui/vite.config.ts) | Proxy e configuração Vite |
+
+## Thread Management
+
+- `threadId` identifica a conversa.
+- `responseId` identifica a resposta individual.
+- `ThreadStore` mantém histórico como `list[Message]` por thread.
+- `Message` é `TypedDict` com `lc_message: BaseMessage` e `id: str | None`.
+- `get_messages()` retorna `list[BaseMessage]` compatível com LangChain.
+
+## Evolução Planejada
+
+- **Persistência**: migrar `ThreadStore` de in-memory para banco de dados real (SQLite, PostgreSQL).
+- **Agents/Tools**: adicionar tools LangChain para funcionalidades específicas (SQL, busca, etc.).
+- **System Prompts**: implementar módulo de prompts parametrizados.
+- **Autenticação**: adicionar auth para proteger endpoints.
+- **Múltiplas conversas**: UI para gerenciar múltiplas threads.
+- **Modularização**: evoluir estrutura flat para estrutura modular (`app/api/`, `app/services/`, etc.).
+
+## Anti-padrões
+
+- ❌ Lógica de IA no frontend.
+- ❌ Frontend acessando C1 API diretamente (sem backend intermediário).
+- ❌ Backend expondo detalhes internos de erro ao frontend.
+- ❌ Estado de threads perdido entre restarts (TODO: persistência).
+- ❌ Misturar responsabilidades de backend e frontend.
+
+## Checklist
+
+- [ ] Backend gerencia toda a lógica de IA.
+- [ ] Frontend apenas renderiza e gerencia interação.
+- [ ] Comunicação via proxy Vite.
+- [ ] Threads gerenciadas com `ThreadStore`.
+- [ ] Mensagens como `BaseMessage` do LangChain.
+- [ ] Separação clara de responsabilidades.

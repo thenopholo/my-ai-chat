@@ -1,0 +1,105 @@
+---
+globs: ui/src/**/*.tsx
+---
+
+# Componentes React — Frontend
+
+## Objetivo
+
+Padronizar a criação e organização de componentes React no frontend, seguindo boas práticas do React 19 e TypeScript.
+
+## Regras
+
+### Componentes Funcionais
+
+- **Sempre** componentes funcionais (nunca classes).
+- Export `default` para componentes de página; export nomeado para componentes reutilizáveis.
+- Um componente principal por arquivo `.tsx`.
+
+### Props Tipadas
+
+- Defina props com `interface` (preferido para props de componentes):
+
+```tsx
+interface ChatMessageProps {
+  content: string;
+  role: 'user' | 'assistant';
+  timestamp?: Date;
+}
+
+export function ChatMessage({ content, role, timestamp }: ChatMessageProps) {
+  // ...
+}
+```
+
+- Destructuring de props no parâmetro da função.
+- Props opcionais com `?` e valores default quando aplicável.
+- Use `React.PropsWithChildren<Props>` quando o componente aceita children.
+
+### Composição
+
+- Prefira composição sobre herança.
+- Componentes pequenos e focados (single responsibility).
+- Use `children` para composição de conteúdo.
+- Render props ou hooks para compartilhar lógica.
+
+### Custom Hooks
+
+- Extraia lógica reutilizável para custom hooks (`use` prefix).
+- Hooks em arquivos separados (`hooks/useChat.ts`).
+- Hooks retornam dados e funções — componentes renderizam.
+
+### Memoização
+
+- `React.memo()` para componentes que recebem as mesmas props frequentemente.
+- `useMemo()` para cálculos caros baseados em deps estáveis.
+- `useCallback()` para callbacks passados como props a componentes memorizados.
+- **Não** memorize tudo — apenas quando houver problema de performance real.
+
+### Listas e Keys
+
+- Sempre use `key` única e estável em listas (nunca index como key se a lista muda).
+- Keys devem ser IDs do domínio, não geradas aleatoriamente a cada render.
+
+### Acessibilidade (a11y)
+
+- Elementos interativos acessíveis via teclado.
+- `aria-label` em elementos sem texto visível.
+- Semântica HTML correta (`<button>`, `<nav>`, `<main>`, `<section>`).
+- Contraste adequado de cores.
+
+### Lazy Loading
+
+- Use `React.lazy()` + `Suspense` para code splitting de rotas/páginas.
+- Fallback com loading indicator no `Suspense`.
+
+### React 19
+
+- Use `use()` hook para leitura de promises e contextos (quando estável).
+- Server Actions e `useFormStatus` — aplicáveis se/quando migrar para framework com RSC.
+- `useOptimistic` para updates otimistas.
+
+## Referência ao Projeto Atual
+
+- [App.tsx](mdc:ui/src/App.tsx): componente raiz, renderiza `C1Chat` do SDK Thesys.
+- [index.tsx](mdc:ui/src/index.tsx): entry point com `React.StrictMode`.
+
+## Anti-padrões
+
+- ❌ Componentes de classe.
+- ❌ Props sem tipagem (`any` ou `props: object`).
+- ❌ Lógica de negócio complexa dentro do JSX.
+- ❌ Componentes com mais de 200 linhas.
+- ❌ `useEffect` para tudo (considere hooks especializados ou event handlers).
+- ❌ `key={index}` em listas que mudam.
+- ❌ Memoização prematura sem necessidade.
+
+## Checklist
+
+- [ ] Componentes funcionais com props tipadas.
+- [ ] Destructuring de props.
+- [ ] Composição sobre herança.
+- [ ] Lógica extraída para custom hooks.
+- [ ] Keys estáveis em listas.
+- [ ] Acessibilidade básica (a11y).
+- [ ] Lazy loading para páginas/rotas pesadas.

@@ -1,0 +1,101 @@
+---
+globs: ui/src/**
+---
+
+# Serviços e API — Frontend
+
+## Objetivo
+
+Padronizar a comunicação do frontend com o backend e APIs externas, garantindo tipagem, tratamento de erros e segurança.
+
+## Estado Atual
+
+- Proxy Vite: `/api` → `http://127.0.0.1:8000` — ver [vite.config.ts](mdc:ui/vite.config.ts).
+- Rewrite: `/api/chat` → `http://127.0.0.1:8000/chat`.
+- WebSocket suportado pelo proxy (`ws: true`).
+- SDK `C1Chat` do `@thesysai/genui-sdk` abstrai a comunicação com o backend via `apiUrl="/api/chat"` — ver [App.tsx](mdc:ui/src/App.tsx).
+
+## Regras
+
+### Proxy e URLs
+
+- Toda comunicação com o backend via proxy Vite (`/api/*`).
+- Nunca hardcode URLs do backend no frontend (`http://localhost:8000`).
+- Em produção, configurar proxy reverso (nginx, Caddy) para as mesmas rotas.
+
+### HTTP Client
+
+- Quando precisar de chamadas HTTP manuais (além do SDK), use `fetch` nativo ou `axios`.
+- Tipar requests e responses com interfaces TypeScript.
+- Centralizar chamadas em `src/services/` (ex.: `chatService.ts`).
+
+### Padrão de Service
+
+```typescript
+// src/services/chatService.ts
+interface ChatResponse {
+  content: string;
+  threadId: string;
+}
+
+export async function sendMessage(
+  message: string,
+  threadId: string
+): Promise<ChatResponse> {
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt: { role: 'user', content: message }, threadId }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erro HTTP: ${response.status}`);
+  }
+
+  return response.json();
+}
+```
+
+### Streaming (SSE/WebSocket)
+
+- Para streaming de respostas do LLM, use SSE (Server-Sent Events) ou WebSocket.
+- O SDK `C1Chat` já gerencia streaming internamente.
+- Se implementar streaming manual, use `EventSource` ou `ReadableStream`.
+
+### Tratamento de Erros
+
+- Sempre verifique `response.ok` ou status codes.
+- Erros de rede: exiba mensagem amigável ao usuário.
+- Retry com backoff para erros temporários (500, 503, timeout).
+- Nunca ignore erros silenciosamente.
+
+### Variáveis de Ambiente
+
+- Use `import.meta.env.VITE_*` para variáveis de ambiente no frontend.
+- Prefixo `VITE_` obrigatório para exposição ao client-side.
+- **Nunca** coloque secrets no frontend (API keys, tokens privados).
+- `.env.local` para overrides locais (no `.gitignore`).
+
+### Integração com SDKs
+
+- `C1Chat` do `@thesysai/genui-sdk` abstrai chat, streaming e thread management.
+- Customizações via props do componente.
+- Para funcionalidades não cobertas pelo SDK, criar services dedicados.
+
+## Anti-padrões
+
+- ❌ URLs hardcoded do backend (`http://localhost:8000/chat`).
+- ❌ Chamadas HTTP diretamente nos componentes (extrair para services).
+- ❌ Ignorar erros de rede (`fetch().then(r => r.json())` sem check de status).
+- ❌ Secrets no código frontend ou em env vars sem prefixo `VITE_`.
+- ❌ Dados não tipados vindos da API (`any`).
+- ❌ Múltiplos componentes fazendo a mesma chamada HTTP (centralizar em service).
+
+## Checklist
+
+- [ ] Comunicação via proxy Vite (`/api/*`).
+- [ ] Chamadas HTTP centralizadas em `services/`.
+- [ ] Requests e responses tipados.
+- [ ] Tratamento de erros em todas as chamadas.
+- [ ] Sem secrets no frontend.
+- [ ] Env vars com prefixo `VITE_`.

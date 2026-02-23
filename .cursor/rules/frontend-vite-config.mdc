@@ -1,0 +1,101 @@
+---
+globs: ui/vite.config.ts
+---
+
+# Configuração Vite — Frontend
+
+## Objetivo
+
+Documentar e padronizar a configuração do Vite no frontend.
+
+## Configuração Atual
+
+Referência: [vite.config.ts](mdc:ui/vite.config.ts).
+
+```typescript
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    host: true,
+    port: 4000,
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+      },
+    },
+  },
+});
+```
+
+## Regras
+
+### Plugins
+
+- `@vitejs/plugin-react` para suporte a React (JSX transform, Fast Refresh).
+- Adicione plugins conforme necessidade (ex.: `vite-plugin-svgr` para SVGs como componentes).
+
+### Proxy de API
+
+- `/api` redireciona para `http://127.0.0.1:8000` (backend FastAPI).
+- `changeOrigin: true` — ajusta o header `Origin` para o target.
+- `ws: true` — suporta WebSocket.
+- `rewrite` remove o prefixo `/api` antes de encaminhar.
+- **Todas** as chamadas ao backend devem usar o prefixo `/api/`.
+
+### Server
+
+- `host: true` — aceita conexões de qualquer IP (útil para Docker/rede local).
+- `port: 4000` — porta de desenvolvimento.
+- Não altere a porta sem atualizar a documentação.
+
+### Aliases de Path (recomendado)
+
+- Configure `resolve.alias` para imports absolutos:
+
+```typescript
+import path from 'path';
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+});
+```
+
+- Atualize `tsconfig.json` com `paths` correspondente.
+
+### Variáveis de Ambiente
+
+- Variáveis expostas ao client devem ter prefixo `VITE_`.
+- Acesse via `import.meta.env.VITE_*`.
+- Nunca coloque secrets em variáveis `VITE_*` (são expostas no bundle).
+- Use `.env`, `.env.local`, `.env.production` conforme necessidade.
+
+### Build
+
+- `tsc && vite build` — TypeScript verifica tipos antes do build (ver `scripts.build` no [package.json](mdc:ui/package.json)).
+- Otimize chunks com `build.rollupOptions.output.manualChunks` se necessário.
+- Habilite source maps em staging (`build.sourcemap: true`), desabilite em produção.
+
+### Otimização de Dependências
+
+- Vite pré-bundla deps com esbuild automaticamente.
+- Use `optimizeDeps.include` para forçar pré-bundle de deps problemáticas.
+- Use `optimizeDeps.exclude` para excluir deps que não precisam de pré-bundle.
+
+## Checklist
+
+- [ ] Plugin React configurado.
+- [ ] Proxy de API apontando para o backend correto.
+- [ ] Variáveis de ambiente com prefixo `VITE_`.
+- [ ] Build com verificação de tipos (`tsc && vite build`).
+- [ ] Aliases de path configurados (quando necessário).

@@ -1,0 +1,94 @@
+---
+globs: backend/**/*.py
+description: "Guiding UI generations do C1 — system prompts, contexto e UI hints."
+---
+# Thesys C1 — Guiding UI Outputs
+
+## Objetivo
+
+Padronizar o uso de system prompts e contexto para controlar a estrutura e conteúdo da UI gerada pelo C1.
+
+## System Prompts
+
+- Definir personalidade, formato de resposta e restrições via system prompts.
+- Armazenar em módulos separados (`prompts/` ou `app/prompts/`).
+- Usar `SystemMessage` do LangChain como primeira mensagem do histórico.
+- Parametrizar prompts — nunca hardcodar o texto completo em linha.
+
+```python
+from langchain_core.messages import SystemMessage
+
+SYSTEM_PROMPT = """Você é um assistente especializado em análise de dados.
+Sempre apresente resultados em tabelas quando possível.
+Use gráficos para visualizar tendências.
+Responda em português brasileiro."""
+
+system_message = SystemMessage(content=SYSTEM_PROMPT)
+
+# Incluir como primeira mensagem do histórico
+conversation_history = [system_message] + thread_messages
+```
+
+## Contexto
+
+- Incluir contexto relevante no prompt: dados do usuário, histórico, resultados de tools.
+- Separar claramente: informações de contexto vs instruções de comportamento.
+- Atualizar contexto dinamicamente conforme a conversa evolui.
+
+```python
+context_prompt = f"""Contexto atual:
+- Usuário: {user_name}
+- Dados disponíveis: {available_datasets}
+- Último resultado: {last_tool_result}
+"""
+```
+
+## UI Hints
+
+- O C1 pode gerar componentes ricos baseados nas instruções do system prompt:
+  - **Tabelas**: "apresente dados em formato de tabela".
+  - **Gráficos**: "use gráficos para visualizar tendências".
+  - **Cards**: "mostre informações resumidas em cards".
+  - **Formulários**: "crie um formulário para coletar dados".
+  - **Listas**: "organize itens em listas estruturadas".
+- Seja específico nas instruções para obter UI mais rica.
+
+Conforme documentação: https://docs.thesys.dev/guides/guiding-outputs
+
+## Organização de Prompts
+
+```
+backend/
+├── prompts/                    # ou app/prompts/
+│   ├── __init__.py
+│   ├── system_prompts.py       # System messages constantes
+│   └── templates.py            # ChatPromptTemplates parametrizados
+```
+
+- Cada prompt com nome descritivo (ex.: `DATA_ANALYST_PROMPT`, `CUSTOMER_SUPPORT_PROMPT`).
+- Prompts como constantes `UPPER_SNAKE_CASE`.
+- Docstrings explicando quando usar cada prompt.
+
+## Segurança
+
+- **Separação clara**: system prompt (controlado pelo desenvolvedor) vs user input (nunca confiar sem validação).
+- Nunca permitir que o usuário controle diretamente o system prompt.
+- Sanitizar inputs do usuário antes de incluir como contexto.
+- Delimitar claramente system prompt vs user input nas mensagens enviadas ao LLM.
+
+## Anti-padrões
+
+- ❌ System prompts hardcoded como strings soltas no código.
+- ❌ System prompts que o usuário pode manipular via input.
+- ❌ Prompts genéricos sem instruções específicas de UI.
+- ❌ Contexto desatualizado ou irrelevante incluído no prompt.
+- ❌ Misturar instruções de sistema com dados do usuário na mesma mensagem.
+
+## Checklist
+
+- [ ] System prompts em módulos separados.
+- [ ] Prompts como constantes com nomes descritivos.
+- [ ] Instruções específicas de UI no system prompt quando necessário.
+- [ ] Separação clara entre system prompt e user input.
+- [ ] Contexto relevante incluído dinamicamente.
+- [ ] Inputs do usuário sanitizados antes de incluir como contexto.

@@ -1,0 +1,84 @@
+---
+globs: ui/src/**
+---
+
+# Arquitetura React — Frontend
+
+## Objetivo
+
+Definir o padrão arquitetural do frontend React 19, organizando código por responsabilidade e mantendo direções de dependência claras.
+
+## Stack Atual
+
+- **React 19** com `react-dom` (SPA, não SSR).
+- **TypeScript 5.8** com strict mode.
+- **Vite 6** como bundler — ver [vite.config.ts](mdc:ui/vite.config.ts).
+- **@crayonai/react-ui** para componentes de chat.
+- **@thesysai/genui-sdk** (`C1Chat`) para integração com IA — ver [App.tsx](mdc:ui/src/App.tsx).
+- **lucide-react** para ícones.
+- **react-markdown** para renderização de Markdown.
+
+## Estrutura Atual (flat)
+
+```
+ui/src/
+├── App.tsx         # Componente raiz (renderiza C1Chat)
+├── index.tsx       # Entry point (ReactDOM.createRoot)
+├── index.css       # Estilos globais
+└── react-app-env.d.ts  # Declarações de tipo
+```
+
+## Estrutura Recomendada (quando o app crescer)
+
+```
+ui/src/
+├── App.tsx
+├── index.tsx
+├── index.css
+├── components/        # Componentes reutilizáveis
+│   ├── chat/          # Componentes de chat customizados
+│   └── ui/            # Componentes de UI genéricos
+├── hooks/             # Custom hooks
+├── services/          # Comunicação com backend/APIs
+├── types/             # Tipos e interfaces compartilhados
+├── utils/             # Funções utilitárias puras
+├── contexts/          # Context providers
+└── pages/             # Páginas/views (se houver roteamento)
+```
+
+## Direções de Dependência
+
+```
+Pages/Views → Components → Hooks → Services → Types
+                              ↓
+                          Contexts
+```
+
+- Components podem usar hooks e services.
+- Hooks podem usar services e contexts.
+- Services são independentes de React (funções puras + fetch).
+- Types não importam nada (são leaf nodes).
+- **Nunca** crie dependências circulares.
+
+## Integração com SDKs de Chat
+
+- `C1Chat` do `@thesysai/genui-sdk` é o componente principal de chat.
+- `apiUrl="/api/chat"` aponta para o proxy Vite → backend FastAPI.
+- Estilos do `@crayonai/react-ui` importados globalmente: `@crayonai/react-ui/styles/index.css`.
+- Customizações de chat devem ser feitas via props do `C1Chat` ou componentes wrapper.
+
+## Anti-padrões
+
+- ❌ Lógica de negócio dentro de componentes (extrair para hooks/services).
+- ❌ Componentes com mais de 200 linhas (dividir em subcomponentes).
+- ❌ Estado global espalhado sem organização.
+- ❌ Dependências circulares entre módulos.
+- ❌ Importar estilos de componentes em módulos de lógica.
+
+## Checklist
+
+- [ ] Componentes focados em renderização (lógica em hooks/services).
+- [ ] Direções de dependência respeitadas.
+- [ ] Novos componentes em `components/`, hooks em `hooks/`, etc.
+- [ ] Sem dependências circulares.
+- [ ] Integração com SDKs via componentes wrapper quando necessário.

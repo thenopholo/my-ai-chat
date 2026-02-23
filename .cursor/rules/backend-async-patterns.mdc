@@ -1,0 +1,88 @@
+---
+globs: backend/**/*.py
+---
+
+# Padrões Async — Backend
+
+## Objetivo
+
+Garantir uso consistente e correto de programação assíncrona no backend FastAPI, evitando bloqueios e maximizando performance.
+
+## Regras
+
+### Async/Await
+
+- Endpoints com I/O (HTTP, DB, LLM, filesystem) devem ser `async def`.
+- Endpoints puramente computacionais podem ser `def` (FastAPI roda em threadpool).
+- **Nunca** chame funções sync bloqueantes dentro de `async def` sem `asyncio.to_thread()`.
+- Use `await` explícito — nunca ignore o resultado de uma coroutine.
+
+### Streaming
+
+- Use async generators para produzir chunks de streaming.
+- `StreamingResponse` do FastAPI para SSE (Server-Sent Events).
+- Padrão atual: `write_content()` do `thesys_genui_sdk` para streaming (ver [llm_runner.py](mdc:backend/llm_runner.py)).
+- Implemente timeouts nos streams para evitar conexões penduradas.
+
+### HTTP Client Async
+
+- Para chamadas HTTP externas em contexto async, prefira `httpx.AsyncClient` sobre `requests`.
+- O SDK da OpenAI atual usa client sync — ao migrar, considere `AsyncOpenAI`.
+- Sempre feche clients HTTP (use `async with` ou context managers).
+
+### Concorrência
+
+- Use `asyncio.gather()` para executar múltiplas coroutines em paralelo.
+- Use `asyncio.TaskGroup` (Python 3.11+) para grupos de tarefas com tratamento de erros.
+- Cuidado com shared state — use locks (`asyncio.Lock`) quando necessário.
+
+### Timeouts
+
+- Configure timeouts em **todas** as chamadas externas.
+- Use `asyncio.wait_for()` ou `asyncio.timeout()` (Python 3.11+).
+- Timeout padrão sugerido: 30s para LLMs, 10s para APIs genéricas.
+
+### Context e Event Loop
+
+- Nunca crie um novo event loop dentro de código async (`asyncio.new_event_loop()`).
+- Nunca use `asyncio.run()` dentro de código que já está em um event loop.
+- Use `contextvars` para propagar contexto em tarefas assíncronas.
+
+## Patterns Recomendados
+
+```python
+# ✅ Async endpoint com streaming
+async def chat_endpoint(request: ChatRequest):
+    await generate_stream(request)
+
+# ✅ Paralelizar chamadas independentes
+results = await asyncio.gather(
+    fetch_context(query),
+    get_user_history(user_id),
+)
+
+# ✅ Timeout em chamada externa
+async with asyncio.timeout(30):
+    response = await llm_client.generate(prompt)
+
+# ✅ Rodar código sync bloqueante em thread
+result = await asyncio.to_thread(blocking_function, arg)
+```
+
+## Anti-padrões
+
+- ❌ Chamar `time.sleep()` em contexto async (usar `asyncio.sleep()`).
+- ❌ Chamar `requests.get()` em endpoint async (usar `httpx` async).
+- ❌ Ignorar retorno de coroutine (esquecer o `await`).
+- ❌ Criar event loop dentro de código async.
+- ❌ Shared mutable state sem lock em código concorrente.
+- ❌ Streams sem timeout.
+
+## Checklist
+
+- [ ] Endpoints com I/O são `async def`.
+- [ ] Funções sync bloqueantes usam `asyncio.to_thread()`.
+- [ ] HTTP clients são async (`httpx.AsyncClient`).
+- [ ] Timeouts configurados em chamadas externas.
+- [ ] Streams têm timeout e tratamento de erro.
+- [ ] Sem `time.sleep()` em contexto async.

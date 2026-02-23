@@ -1,0 +1,63 @@
+---
+alwaysApply: true
+description: "Visão geral da plataforma Thesys C1 e do projeto de Generative UI."
+---
+# Thesys C1 — Visão Geral
+
+## Objetivo
+
+Documentar a plataforma Thesys C1 e o padrão de integração adotado neste projeto de Generative UI.
+
+## O que é o C1
+
+- **Thesys C1** é uma plataforma de **Generative UI** — o LLM gera respostas contendo DSL de UI que o frontend renderiza como componentes interativos.
+- A **C1 API** é OpenAI-compatible: endpoint `https://api.thesys.dev/v1/embed`.
+- Usa o protocolo de chat padrão (messages, streaming) mas retorna UI nativa em vez de texto puro.
+
+## Arquitetura do Projeto
+
+```
+Frontend (React + GenUI SDK)
+    ↓ /api/chat (proxy Vite)
+Backend (FastAPI + LangChain + C1 SDK)
+    ↓ HTTPS
+C1 API (https://api.thesys.dev/v1/embed)
+```
+
+- **Backend**: [main.py](mdc:backend/main.py) + [llm_runner.py](mdc:backend/llm_runner.py) + [thread_store.py](mdc:backend/thread_store.py).
+- **Frontend**: [App.tsx](mdc:ui/src/App.tsx) com `C1Chat`.
+- Dependências backend: `thesys-genui-sdk`, `crayonai-stream`, `langchain-openai`.
+- Dependências frontend: `@thesysai/genui-sdk`, `@crayonai/react-ui`.
+
+## Fluxo de Dados
+
+1. Usuário envia mensagem no frontend (`C1Chat`).
+2. Frontend envia `POST /api/chat` (proxy Vite reescreve para `POST /chat` no backend).
+3. Backend recebe o request com `@with_c1_response()` decorator.
+4. `ChatOpenAI` (LangChain) faz streaming via `.astream()` para a C1 API.
+5. Cada chunk é enviado ao frontend via `write_content()`.
+6. Ao final, `get_assistant_message()` retorna a resposta montada pelo SDK.
+7. Resposta salva no `ThreadStore` como `AIMessage` do LangChain.
+8. Frontend renderiza a UI gerada em tempo real.
+
+## Variáveis de Ambiente
+
+- `THESYS_API_KEY` — **obrigatória**, nunca hardcodar no código; definir no `.env`.
+- `C1_MODEL` — modelo C1 (default: `c1/anthropic/claude-sonnet-4/v-20250815`).
+
+## Modelos Disponíveis
+
+- `c1/anthropic/claude-sonnet-4/v-*` — Claude Sonnet via C1.
+- `c1/openai/gpt-4o/v-*` — GPT-4o via C1.
+- Sempre usar prefixo `c1/` nos nomes de modelo.
+
+## Referências
+
+- Thesys C1 Basics: https://docs.thesys.dev/guides/basics
+- Integração Backend: https://docs.thesys.dev/guides/implementing-api
+- Rendering UI: https://docs.thesys.dev/guides/rendering-ui
+- Streaming: https://docs.thesys.dev/guides/streaming
+- Guiding Outputs: https://docs.thesys.dev/guides/guiding-outputs
+- Tool Calling: https://docs.thesys.dev/guides/integrate-data/tool-calling
+- LangChain Integration: https://docs.thesys.dev/guides/frameworks/langchain
+- Documentação completa: https://docs.thesys.dev/llms.txt

@@ -1,0 +1,95 @@
+---
+globs: ui/src/**
+---
+
+# Gerenciamento de Estado — Frontend
+
+## Objetivo
+
+Definir padrões para gerenciamento de estado no frontend React, usando ferramentas nativas (useState, useReducer, Context API) sem dependências externas.
+
+## Estado Atual
+
+- **Sem lib de state management externo** (sem Redux, Zustand, Jotai, etc.).
+- Estado gerenciado via hooks nativos do React (`useState`, `useReducer`).
+- Context API para estado que precisa ser compartilhado entre componentes distantes.
+- `C1Chat` do SDK Thesys gerencia internamente o estado de chat.
+
+## Regras
+
+### Quando Usar Estado Local (`useState`)
+
+- Estado que pertence a **um único componente** ou seus filhos diretos.
+- Formulários, toggles, modais, inputs controlados.
+- Estado de UI (loading, error, expanded/collapsed).
+
+### Quando Usar `useReducer`
+
+- Estado complexo com múltiplas transições (ex.: estado de um formulário multi-step).
+- Quando a próxima ação depende do estado anterior.
+- Quando há mais de 3 `useState` relacionados no mesmo componente.
+
+### Quando Usar Context API
+
+- Estado compartilhado entre componentes **distantes** na árvore.
+- Temas, autenticação, configurações globais.
+- **Não** use Context para estado que muda com alta frequência (causa re-renders).
+
+### Padrão de Estado (Loading/Error/Success)
+
+```tsx
+interface AsyncState<T> {
+  data: T | null;
+  loading: boolean;
+  error: string | null;
+}
+```
+
+- Sempre gerencie os 3 estados: loading, error, success.
+- Resete error ao iniciar nova operação.
+
+### Imutabilidade
+
+- **Nunca** mute estado diretamente (`state.push()`, `state.x = y`).
+- Use spread operator ou `structuredClone()` para criar novas referências.
+- Arrays: `[...arr, newItem]`, `arr.filter()`, `arr.map()`.
+- Objetos: `{ ...obj, key: newValue }`.
+
+### Side Effects
+
+- `useEffect` apenas para sincronização com sistemas externos (APIs, timers, DOM).
+- Cleanup em `useEffect` quando necessário (unsubscribe, cancel, clear timer).
+- Dependências corretas no array de deps — sem deps faltantes ou excessivas.
+- Prefira event handlers sobre `useEffect` quando possível.
+
+### Evitar Re-renders
+
+- Quebre componentes grandes em menores para isolar re-renders.
+- Mova estado "para baixo" — mais perto de onde é usado.
+- Use `React.memo()` em componentes puros que recebem props estáveis.
+- Context providers devem ter valor memoizado (`useMemo`).
+
+## Evolução Futura
+
+- Se precisar de estado global complexo: considere **Zustand** (leve) ou **Jotai** (atômico).
+- Se precisar de cache de servidor: considere **TanStack Query** (React Query).
+- Atualize esta rule ao adotar qualquer lib externa.
+
+## Anti-padrões
+
+- ❌ Estado global para dados que são locais a um componente.
+- ❌ Mutação direta de estado (`state.x = y`).
+- ❌ `useEffect` para lógica que deveria ser um event handler.
+- ❌ Context para estado de alta frequência de atualização.
+- ❌ Props drilling excessivo (5+ níveis — usar Context).
+- ❌ Estado derivado armazenado em `useState` (calcular no render).
+
+## Checklist
+
+- [ ] Estado local quando possível (`useState`).
+- [ ] `useReducer` para estado complexo.
+- [ ] Context API para estado global de baixa frequência.
+- [ ] Padrão loading/error/success em operações async.
+- [ ] Imutabilidade respeitada.
+- [ ] `useEffect` com deps corretas e cleanup.
+- [ ] Sem re-renders desnecessários.

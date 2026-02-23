@@ -1,0 +1,75 @@
+---
+globs: backend/**/*.py
+---
+
+# Pydantic Models — Backend
+
+## Objetivo
+
+Padronizar o uso de Pydantic v2 para validação, serialização e tipagem de dados no backend.
+
+## Regras
+
+### BaseModel para APIs
+
+- Use `BaseModel` para schemas de request e response.
+- Tipagem explícita em todos os campos.
+- Use `Field()` com `description` para melhorar a documentação OpenAPI.
+- Configure `model_config` com `extra = "forbid"` por padrão (ou `"allow"` quando necessário, como no `ChatRequest` atual).
+
+### Referência ao Projeto Atual
+
+- [llm_runner.py](mdc:backend/llm_runner.py): `ChatRequest(BaseModel)` com `Config: extra = "allow"`.
+- [thread_store.py](mdc:backend/thread_store.py): `Message(TypedDict)` para estrutura interna.
+- [llm_runner.py](mdc:backend/llm_runner.py): `Prompt(TypedDict)` para input parcial.
+
+### Validação
+
+- Use `field_validator` (v2) para validação de campos individuais.
+- Use `model_validator` (v2) para validação cross-field.
+- Mensagens de erro claras e informativas.
+- Prefira validação no model sobre validação manual no endpoint.
+
+### Separação de Models
+
+- **Input models** (request): validação estrita, `extra = "forbid"`.
+- **Output models** (response): serialização controlada.
+- **Domain models**: `TypedDict` ou `dataclass` para estruturas internas que não precisam de validação.
+- Não reutilize o mesmo model para input e output se os campos diferirem.
+
+### Serialização
+
+- Use `model_dump()` (não `dict()` depreciado).
+- Use `model_dump_json()` para serialização JSON.
+- Configure `alias` e `by_alias` quando nomes de campo diferem entre Python e JSON.
+- Use `exclude_none=True` quando campos opcionais não devem aparecer na resposta.
+
+### TypedDict e TypeAlias
+
+- Use `TypedDict` para dicts com estrutura fixa que não precisam de validação (ex.: `Message` em [thread_store.py](mdc:backend/thread_store.py)).
+- Use `TypeAlias` para aliases de tipos complexos (ex.: `ThreadId: TypeAlias = str`).
+- `TypedDict` é mais leve que `BaseModel` — use para estruturas internas.
+
+### Pydantic v2 Migração
+
+- Use `model_config = ConfigDict(...)` em vez de `class Config:` (v1 compat, mas v2 preferido).
+- Use `@field_validator` em vez de `@validator`.
+- Use `@model_validator` em vez de `@root_validator`.
+
+## Anti-padrões
+
+- ❌ Usar `dict` genérico onde um `BaseModel` ou `TypedDict` seria mais claro.
+- ❌ `Any` como tipo de campo sem justificativa.
+- ❌ Validação manual no endpoint em vez de no model.
+- ❌ Reutilizar model de input como output (ou vice-versa) com campos diferentes.
+- ❌ Ignorar warnings de depreciação do Pydantic v1 → v2.
+- ❌ `class Config:` (v1) — migrar para `model_config = ConfigDict(...)` (v2).
+
+## Checklist
+
+- [ ] Todo request/response body usa `BaseModel`.
+- [ ] Campos têm types explícitos e `Field(description=...)` quando útil.
+- [ ] Validação feita no model (validators), não no endpoint.
+- [ ] `TypedDict` para estruturas internas leves.
+- [ ] Serialização via `model_dump()` / `model_dump_json()`.
+- [ ] Sintaxe Pydantic v2 (`model_config`, `field_validator`).

@@ -1,0 +1,80 @@
+---
+globs: backend/**
+---
+
+# Arquitetura Limpa — Backend
+
+## Objetivo
+
+Definir a separação de responsabilidades em camadas no backend, seguindo princípios de Clean Architecture e Cosmic Python, adaptados ao contexto FastAPI + LLM.
+
+## Camadas e Responsabilidades
+
+### 1. API (Routers/Endpoints)
+
+- Responsabilidade: receber requests HTTP, validar input (via Pydantic), chamar services, retornar responses.
+- **Não** contém lógica de negócio.
+- Localização atual: [main.py](mdc:backend/main.py).
+- Localização futura: `backend/app/api/routes/`.
+
+### 2. Services (Lógica de Negócio)
+
+- Responsabilidade: orquestrar operações, regras de negócio, coordenar chamadas a stores/repositories e LLMs.
+- Independente de framework HTTP (não importa FastAPI diretamente).
+- Localização atual: [llm_runner.py](mdc:backend/llm_runner.py) (mistura lógica de negócio + integração com SDK).
+- Localização futura: `backend/app/services/`.
+
+### 3. Stores/Repositories (Acesso a Dados)
+
+- Responsabilidade: persistência e recuperação de dados.
+- Interface clara (métodos `get`, `append`, `list`).
+- Localização atual: [thread_store.py](mdc:backend/thread_store.py) (in-memory store).
+- Localização futura: `backend/app/store/` ou `backend/app/repositories/`.
+
+### 4. Models/Schemas (DTOs e Entidades)
+
+- Responsabilidade: definir estruturas de dados (request, response, domínio).
+- Pydantic `BaseModel` para APIs; `TypedDict` para estruturas internas.
+- Localização futura: `backend/app/models/`.
+
+### 5. Agents (LangChain/LangGraph — futuro)
+
+- Responsabilidade: definir chains, graphs, tools para orquestração de IA.
+- Localização futura: `backend/app/agents/`.
+
+## Direções de Dependência
+
+```
+API (routers) → Services → Stores/Repositories
+                    ↓
+              Models/Schemas
+                    ↓
+            Agents (LLM chains/graphs)
+```
+
+- Camadas externas dependem das internas, nunca o contrário.
+- Services não conhecem FastAPI (não importam `Request`, `Response`, etc.).
+- Stores não conhecem Services.
+- Use **Dependency Inversion**: dependa de interfaces/protocolos, não de implementações concretas.
+
+## Injeção de Dependência
+
+- Use `Depends()` do FastAPI para injetar services e stores nos endpoints.
+- Services recebem stores via construtor ou parâmetro.
+- Facilita testes (injetar mocks/fakes).
+
+## Anti-padrões
+
+- ❌ Lógica de negócio nos endpoints/routers.
+- ❌ Endpoints acessando stores diretamente (pular a camada de service).
+- ❌ Services importando objetos do FastAPI (`Request`, `HTTPException`, etc.).
+- ❌ Acoplamento direto a implementações concretas (sem interfaces).
+- ❌ Classes "God Object" que fazem tudo.
+
+## Checklist
+
+- [ ] Endpoints delegam para services (não contêm lógica de negócio).
+- [ ] Services são independentes de framework HTTP.
+- [ ] Stores/repositories têm interface clara e testável.
+- [ ] Direção de dependência respeitada (externo → interno).
+- [ ] Dependency injection via `Depends()` nos endpoints.

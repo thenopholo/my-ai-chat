@@ -1,0 +1,72 @@
+---
+globs: backend/pyproject.toml,backend/uv.lock
+---
+
+# Gerenciamento de Dependências — Backend
+
+## Objetivo
+
+Padronizar o uso do **uv** como gerenciador de pacotes e ambientes virtuais no backend Python.
+
+## Regras
+
+### uv como Ferramenta Principal
+
+- **uv** é o gerenciador de pacotes e ambientes do projeto.
+- `pyproject.toml` é a **fonte única** de dependências — ver [pyproject.toml](mdc:backend/pyproject.toml).
+- `uv.lock` deve ser **commitado** no repositório para builds reproduzíveis.
+- Ambiente virtual em `backend/.venv/` (não commitado, no `.gitignore`).
+
+### Dependências
+
+- Dependências de produção em `[project] dependencies`:
+  - FastAPI, Uvicorn, Pydantic, OpenAI SDK, python-dotenv, crayonai-stream, thesys-genui-sdk.
+- Dependências de desenvolvimento em `[tool.uv.dev-dependencies]` ou `[project.optional-dependencies.dev]`:
+  - pytest, pytest-asyncio, pytest-cov, httpx (testes).
+  - ruff (linter/formatter — pode ser global ou por projeto).
+- Nunca misture deps de dev com deps de prod.
+
+### Pinagem de Versões
+
+- Pins exatos para dependências críticas (`fastapi==0.110.0`, `pydantic==2.11.0`).
+- Ranges com caret (`^`) ou tilde (`~`) para deps que podem ser atualizadas.
+- `uv.lock` garante versões exatas reproduzíveis.
+
+### Python Version
+
+- Projeto requer Python `>=3.10,<3.14` (ver `pyproject.toml`).
+- Pyright configurado para `3.13` (ver [pyrightconfig.json](mdc:pyrightconfig.json)).
+- Use features do Python 3.10+ (union types `X | Y`, match/case, etc.).
+
+## Comandos Úteis
+
+| Comando | Descrição |
+|---|---|
+| `uv sync` | Sincroniza o ambiente virtual com o lockfile |
+| `uv add <pacote>` | Adiciona dependência de produção |
+| `uv add --dev <pacote>` | Adiciona dependência de desenvolvimento |
+| `uv remove <pacote>` | Remove dependência |
+| `uv run <comando>` | Executa comando no ambiente virtual |
+| `uv run uvicorn main:app --reload` | Inicia o servidor de desenvolvimento |
+| `uv run ruff check .` | Roda o linter |
+| `uv run ruff format .` | Roda o formatter |
+| `uv run pytest` | Roda os testes |
+| `uv lock` | Atualiza o lockfile |
+| `uv pip list` | Lista pacotes instalados |
+
+## Anti-padrões
+
+- ❌ Usar `pip install` diretamente (usar `uv add`).
+- ❌ Não commitar `uv.lock`.
+- ❌ Editar `uv.lock` manualmente.
+- ❌ Instalar deps de dev em produção.
+- ❌ Dependências sem versão especificada.
+- ❌ Múltiplos gerenciadores de pacotes (pip + uv + poetry) no mesmo projeto.
+
+## Checklist
+
+- [ ] Todas as deps declaradas no `pyproject.toml`.
+- [ ] `uv.lock` commitado e atualizado.
+- [ ] Deps de dev separadas das de produção.
+- [ ] `uv sync` roda sem erros.
+- [ ] `.venv` no `.gitignore`.

@@ -1,0 +1,81 @@
+---
+globs: backend/**/*.py
+description: "Regras do SDK backend Thesys C1 (thesys-genui-sdk e crayonai-stream)."
+---
+# Thesys C1 — SDK Backend
+
+## Objetivo
+
+Padronizar o uso dos SDKs `thesys-genui-sdk` e `crayonai-stream` no backend Python.
+
+## Componentes do SDK
+
+### `@with_c1_response()` (decorator FastAPI)
+
+- Importar de `thesys_genui_sdk.fast_api`.
+- Aplicar no endpoint **antes** de processar a lógica de streaming.
+- Gerencia o protocolo de resposta C1 automaticamente (SSE, headers, formato).
+- **Não** misturar com `StreamingResponse` manual do FastAPI — o decorator já gerencia tudo.
+
+### `write_content(content: str)` (async)
+
+- Importar de `thesys_genui_sdk.context`.
+- Envia um chunk de texto ao frontend durante o streaming.
+- Chamar para **cada fragmento** recebido do LLM.
+- É `async` — usar com `await`.
+
+### `get_assistant_message()` (sync)
+
+- Importar de `thesys_genui_sdk.context`.
+- Retorna a mensagem final montada pelo SDK como `dict` com chave `'content'`.
+- Chamar **após** todo o streaming ser concluído.
+- Usar o `content` para criar `AIMessage` e salvar no histórico.
+
+## Padrão de Uso
+
+```python
+# Endpoint — main.py
+from thesys_genui_sdk.fast_api import with_c1_response
+
+@app.post('/chat')
+@with_c1_response()
+async def chat_endpoint(request: ChatRequest):
+    await generate_stream(request)
+
+# Streaming — llm_runner.py
+from thesys_genui_sdk.context import get_assistant_message, write_content
+
+async def generate_stream(chat_request: ChatRequest) -> None:
+    # 1. Recuperar histórico
+    conversation_history = thread_store.get_messages(chat_request.threadId)
+
+    # 2. Streaming via LangChain
+    async for chunk in llm.astream(conversation_history):
+        if isinstance(chunk.content, str) and chunk.content:
+            await write_content(chunk.content)
+
+    # 3. Obter resposta montada
+    assistant_response = get_assistant_message()
+    assistant_message = AIMessage(content=assistant_response['content'])
+
+    # 4. Salvar no histórico
+    thread_store.append_message(thread_id, Message(...))
+```
+
+Referências reais: [main.py](mdc:backend/main.py), [llm_runner.py](mdc:backend/llm_runner.py).
+
+## Anti-padrões
+
+- ❌ Usar `StreamingResponse` manual junto com `@with_c1_response()`.
+- ❌ Enviar JSON bruto ou SSE manual quando o decorator está ativo.
+- ❌ Esquecer de chamar `get_assistant_message()` ao final do streaming.
+- ❌ Chamar `write_content()` sem `await`.
+- ❌ Enviar chunks vazios via `write_content('')`.
+
+## Checklist
+
+- [ ] `@with_c1_response()` aplicado no endpoint de chat.
+- [ ] `write_content()` chamado com `await` para cada chunk.
+- [ ] `get_assistant_message()` chamado após o streaming completo.
+- [ ] Resposta final salva no histórico como `AIMessage`.
+- [ ] Sem `StreamingResponse` manual quando usando o decorator.

@@ -1,0 +1,104 @@
+---
+globs: backend/**
+---
+
+# Estrutura do Projeto — Backend
+
+## Objetivo
+
+Definir a organização de diretórios e convenções de módulos do backend Python, documentando a estrutura atual e a evolução recomendada.
+
+## Estrutura Atual (flat)
+
+```
+backend/
+├── main.py            # Entry point FastAPI (app, routers)
+├── llm_runner.py      # Lógica de streaming/LLM (ChatRequest, generate_stream)
+├── thread_store.py    # Armazenamento de threads/mensagens em memória
+├── pyproject.toml     # Dependências e config do Ruff
+├── uv.lock            # Lockfile do uv
+└── .venv/             # Ambiente virtual (não commitado)
+```
+
+Referências:
+- [main.py](mdc:backend/main.py) — app FastAPI e endpoints.
+- [llm_runner.py](mdc:backend/llm_runner.py) — integração com OpenAI/Thesys e streaming.
+- [thread_store.py](mdc:backend/thread_store.py) — gerenciamento de threads em memória.
+
+## Estrutura Recomendada (modular — quando o app crescer)
+
+```
+backend/
+├── app/
+│   ├── __init__.py
+│   ├── main.py                # Entry point, criação do app FastAPI
+│   ├── api/
+│   │   ├── __init__.py
+│   │   └── routes/
+│   │       ├── __init__.py
+│   │       └── chat.py        # Router de chat
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── config.py          # Settings (pydantic-settings ou dotenv)
+│   │   └── dependencies.py    # Dependency injection
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── schemas.py         # Pydantic models, DTOs
+│   ├── services/
+│   │   ├── __init__.py
+│   │   └── llm_service.py     # Lógica de negócio do LLM
+│   ├── agents/                # Futuro: LangChain/LangGraph
+│   │   ├── __init__.py
+│   │   ├── chains.py
+│   │   └── graphs.py
+│   ├── prompts/               # Templates de prompts para LLMs
+│   │   └── system_prompts.py
+│   └── store/
+│       ├── __init__.py
+│       └── thread_store.py    # Armazenamento de threads
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py
+│   ├── test_chat.py
+│   └── test_thread_store.py
+├── pyproject.toml
+├── uv.lock
+└── .venv/
+```
+
+## Regras de Imports
+
+- Imports relativos dentro do mesmo pacote (`from .models import ...`).
+- Imports absolutos a partir da raiz do pacote (`from app.services.llm_service import ...`).
+- Nunca importar módulos de `tests/` dentro de `app/`.
+- Manter separação clara: `api/` não importa diretamente de `store/` (passar por `services/`).
+
+## Convenções de Nomes
+
+- Arquivos: `snake_case.py` (ex.: `llm_runner.py`, `thread_store.py`).
+- Módulos de teste: `test_<nome>.py` ou `<nome>_test.py`.
+- Um módulo = uma responsabilidade clara.
+
+## Gerenciamento com uv
+
+- Use `uv add <pacote>` para adicionar dependências.
+- Use `uv remove <pacote>` para remover.
+- Use `uv sync` para sincronizar o ambiente.
+- Use `uv run <comando>` para executar no ambiente virtual.
+- O `uv.lock` deve ser commitado no repositório.
+
+## Anti-padrões
+
+- ❌ Colocar toda a lógica em um único arquivo.
+- ❌ Imports circulares entre módulos.
+- ❌ Misturar lógica de negócio com definição de rotas.
+- ❌ Hardcodar configurações (usar `.env` ou settings).
+- ❌ Criar módulos com nomes genéricos (`utils.py`, `helpers.py`) sem escopo claro.
+
+## Checklist
+
+- [ ] Cada módulo tem uma responsabilidade única.
+- [ ] Imports seguem a convenção (relativos dentro do pacote, absolutos entre pacotes).
+- [ ] Novos arquivos seguem `snake_case.py`.
+- [ ] `uv.lock` commitado e atualizado.
+- [ ] Nenhum import circular.

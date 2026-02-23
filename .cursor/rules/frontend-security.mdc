@@ -1,0 +1,72 @@
+---
+alwaysApply: true
+description: Regras de segurança para o frontend React/TypeScript.
+---
+
+# Segurança — Frontend
+
+## Objetivo
+
+Garantir que o frontend siga práticas de segurança adequadas, protegendo dados sensíveis e prevenindo vulnerabilidades comuns em SPAs.
+
+## Regras
+
+### Variáveis de Ambiente
+
+- Variáveis de ambiente no frontend devem ter prefixo `VITE_` (Vite as expõe ao bundle).
+- **Nunca** coloque API keys, tokens privados ou secrets em variáveis `VITE_*`.
+- Tudo que está em `import.meta.env` é **público** — visível no código-fonte do navegador.
+- Use `.env.local` para overrides locais (está no `.gitignore`).
+
+### Secrets e API Keys
+
+- O frontend **não deve** armazenar ou gerenciar secrets.
+- Autenticação com APIs deve ser feita pelo backend (o frontend envia cookies/tokens ao backend que faz a chamada).
+- Nunca exponha `THESYS_API_KEY` ou similares no frontend.
+
+### XSS (Cross-Site Scripting)
+
+- React escapa HTML por padrão no JSX — **não** use `dangerouslySetInnerHTML` sem sanitização.
+- Ao renderizar Markdown (via `react-markdown`), garanta que HTML perigoso é sanitizado.
+- Valide e sanitize inputs do usuário antes de renderizar.
+
+### CORS
+
+- CORS é configurado no backend — o frontend apenas respeita as restrições.
+- Toda comunicação com o backend via proxy Vite (`/api/*`) — sem problemas de CORS em dev.
+- Em produção, garanta que o proxy reverso está configurado corretamente.
+
+### Dados Sensíveis
+
+- Não armazene dados sensíveis no `localStorage` ou `sessionStorage` (acessíveis via XSS).
+- Use `httpOnly` cookies para tokens de autenticação (quando implementado).
+- Não logue dados sensíveis no console do navegador.
+
+### Logs
+
+- Sem `console.log()` em produção com dados de usuário.
+- Não logue tokens, IDs sensíveis ou conteúdo de mensagens em produção.
+
+### Dependências
+
+- Mantenha dependências atualizadas (`npm audit`).
+- Não instale pacotes de fontes não confiáveis.
+- Revise changelogs antes de major updates.
+
+## Anti-padrões
+
+- ❌ API keys no código frontend ou em `VITE_*` env vars.
+- ❌ `dangerouslySetInnerHTML` sem sanitização.
+- ❌ Dados sensíveis em `localStorage`/`sessionStorage`.
+- ❌ `console.log()` com dados de usuário em produção.
+- ❌ Dependências desatualizadas com vulnerabilidades conhecidas.
+- ❌ Confiar em validação apenas no frontend (validar também no backend).
+
+## Checklist
+
+- [ ] Sem secrets no código frontend.
+- [ ] Variáveis `VITE_*` não contêm dados sensíveis.
+- [ ] Sem `dangerouslySetInnerHTML` sem sanitização.
+- [ ] Markdown renderizado de forma segura.
+- [ ] Sem dados sensíveis em storage do navegador.
+- [ ] Dependências auditadas (`npm audit`).

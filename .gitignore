@@ -70,4 +70,4 @@
 **/*.sublime-project
 
 # AI Instructions
-.cursor/
+# .cursor/

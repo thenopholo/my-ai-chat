@@ -1,0 +1,84 @@
+---
+alwaysApply: true
+description: Regras de segurança para o backend Python.
+---
+
+# Segurança — Backend
+
+## Objetivo
+
+Garantir que o backend siga práticas de segurança adequadas, protegendo dados sensíveis, APIs e comunicação com LLMs.
+
+## Regras
+
+### Variáveis de Ambiente e Secrets
+
+- API keys, tokens e secrets **sempre** via variáveis de ambiente (`.env`).
+- `.env` **deve estar** no `.gitignore` (já está — ver [.gitignore](mdc:.gitignore)).
+- Nunca hardcodar secrets no código-fonte.
+- Referencie: `os.getenv("THESYS_API_KEY")` (padrão atual em [llm_runner.py](mdc:backend/llm_runner.py)).
+- Evolução: usar `pydantic-settings` com `BaseSettings` para validação de env vars.
+
+### Validação de Input
+
+- **Todo** input do cliente deve ser validado com Pydantic models.
+- Nunca confie em dados do cliente — valide tipos, tamanhos e formatos.
+- Use `extra = "forbid"` em models de request para rejeitar campos inesperados.
+
+### CORS
+
+- Configure `CORSMiddleware` com origins **explícitas**.
+- Nunca use `allow_origins=["*"]` em produção.
+- Permita apenas os métodos e headers necessários.
+
+### Proteção contra Injection
+
+- **SQL Injection**: use ORM ou queries parametrizadas (quando houver DB).
+- **Prompt Injection**: sanitize e valide inputs antes de enviar ao LLM.
+- Delimite claramente system prompt vs user input.
+- Não permita que o usuário controle diretamente o system prompt.
+
+### Logging Seguro
+
+- **Nunca** logue dados sensíveis: API keys, tokens, senhas, PII.
+- Mascare dados sensíveis em logs (ex.: `key=***...abc`).
+- Logue apenas o necessário para debugging.
+
+### Rate Limiting
+
+- Implemente rate limiting nos endpoints expostos (especialmente `/chat`).
+- Proteja contra abuso de API e DoS.
+- Use middleware ou dependência para rate limiting.
+
+### Headers de Segurança
+
+- Configure headers de segurança: `X-Content-Type-Options`, `X-Frame-Options`, `Strict-Transport-Security`.
+- Use middleware para adicionar headers automaticamente.
+
+### Comunicação com LLMs
+
+- Timeouts em todas as chamadas a APIs externas.
+- Não exponha detalhes internos de erros de LLM ao cliente.
+- Valide e sanitize respostas do LLM antes de retornar ao cliente.
+
+## Anti-padrões
+
+- ❌ API keys hardcoded no código.
+- ❌ `.env` commitado no repositório.
+- ❌ CORS com `"*"` em produção.
+- ❌ Input do cliente sem validação.
+- ❌ Logs com dados sensíveis (keys, tokens, PII).
+- ❌ Endpoints sem rate limiting em produção.
+- ❌ System prompts controláveis pelo usuário.
+- ❌ Stack traces expostos em respostas de erro.
+
+## Checklist
+
+- [ ] API keys em variáveis de ambiente (`.env`).
+- [ ] `.env` no `.gitignore`.
+- [ ] Input validado com Pydantic models.
+- [ ] CORS com origins explícitas.
+- [ ] Logs sem dados sensíveis.
+- [ ] Rate limiting nos endpoints públicos.
+- [ ] Timeouts em chamadas externas.
+- [ ] Prompt injection mitigado (separação system/user).

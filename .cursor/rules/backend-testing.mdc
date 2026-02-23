@@ -1,0 +1,104 @@
+---
+globs: backend/tests/**,backend/**/*_test.py,backend/**/test_*.py
+---
+
+# Testes — Backend
+
+## Objetivo
+
+Definir padrões de testes para o backend Python, garantindo cobertura e confiabilidade do código.
+
+> **Nota**: Atualmente o projeto **não possui testes** nem `pytest` configurado. Estas regras servem como guia para quando testes forem adicionados.
+
+## Regras
+
+### Framework
+
+- Use **pytest** como framework de testes.
+- Adicione via `uv add --dev pytest pytest-asyncio pytest-cov httpx`.
+- Configure em `pyproject.toml`:
+
+```toml
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+```
+
+### Tipos de Teste
+
+- **Unit tests**: testam funções/classes isoladas (services, stores, models).
+- **Integration tests**: testam endpoints FastAPI com `httpx.AsyncClient`.
+- **E2E tests**: testam fluxos completos (chat, streaming).
+
+### Estrutura
+
+```
+backend/tests/
+├── __init__.py
+├── conftest.py           # Fixtures compartilhadas
+├── test_chat.py          # Testes do endpoint de chat
+├── test_thread_store.py  # Testes do ThreadStore
+└── test_llm_runner.py    # Testes do LLM runner (com mocks)
+```
+
+- Espelhe a estrutura de `backend/app/` (quando modularizado).
+- Um arquivo de teste por módulo.
+
+### Endpoints FastAPI
+
+- Use `httpx.AsyncClient` com `ASGITransport` para testar endpoints:
+
+```python
+from httpx import ASGITransport, AsyncClient
+from main import app
+
+async def test_health():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://test') as client:
+        response = await client.get('/')
+        assert response.status_code == 200
+```
+
+### Mocking
+
+- Use `unittest.mock.patch` ou `pytest-mock` para mockar dependências.
+- Mock o client OpenAI para testes que envolvem LLM (nunca chame a API real em testes).
+- Para LangChain (futuro): use `FakeLLM` ou `FakeChatModel`.
+- Mock o `thread_store` quando testar endpoints isoladamente.
+
+### Fixtures
+
+- Fixtures em `conftest.py` para recursos compartilhados.
+- Use `@pytest.fixture` com escopo adequado (`function`, `module`, `session`).
+- Fixture para `AsyncClient` do httpx.
+- Fixture para `ThreadStore` limpo.
+
+### Cobertura
+
+- Use `pytest-cov` para medir cobertura.
+- Alvo mínimo: **80%** de cobertura.
+- Comando: `uv run pytest --cov=. --cov-report=term-missing`.
+
+### Marcadores
+
+- Use `@pytest.mark.asyncio` para testes assíncronos (ou `asyncio_mode = "auto"`).
+- Use `@pytest.mark.slow` para testes lentos.
+- Use `@pytest.mark.integration` para testes de integração.
+
+## Anti-padrões
+
+- ❌ Testes que dependem de estado externo (API keys reais, serviços rodando).
+- ❌ Testes sem assertions claras.
+- ❌ Testes que dependem de ordem de execução.
+- ❌ Mock excessivo que invalida o teste (testar o mock, não o código).
+- ❌ Fixtures com escopo `session` que causam state leaking.
+- ❌ Ignorar testes falhando (`@pytest.mark.skip` sem motivo).
+
+## Checklist
+
+- [ ] pytest instalado e configurado (`pyproject.toml`).
+- [ ] Estrutura `backend/tests/` criada.
+- [ ] `conftest.py` com fixtures compartilhadas.
+- [ ] Endpoints testados com `httpx.AsyncClient`.
+- [ ] LLM mockado em todos os testes (sem chamadas reais).
+- [ ] Cobertura medida com `pytest-cov`.

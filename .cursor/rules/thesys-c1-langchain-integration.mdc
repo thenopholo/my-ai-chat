@@ -1,0 +1,111 @@
+---
+globs: backend/**/*.py
+description: "Integração LangChain com Thesys C1 — configuração do LLM, streaming, mensagens e agents."
+---
+# Thesys C1 — Integração LangChain
+
+## Objetivo
+
+Padronizar a integração entre LangChain e a C1 API como LLM provider no backend.
+
+## Configuração do LLM
+
+- Usar `ChatOpenAI` do `langchain_openai` como wrapper para a C1 API.
+- Configurar `base_url='https://api.thesys.dev/v1/embed'` — **sempre** este endpoint.
+- `api_key` via variável de ambiente `THESYS_API_KEY` — nunca hardcodar.
+- `streaming=True` para habilitar streaming no chat.
+- Centralizar nome do modelo em variável (`C1_MODEL`).
+
+```python
+from langchain_openai import ChatOpenAI
+
+C1_MODEL: str = os.getenv(
+    'C1_MODEL', 'c1/anthropic/claude-sonnet-4/v-20250815'
+)
+
+llm = ChatOpenAI(
+    api_key=os.getenv('THESYS_API_KEY'),
+    base_url='https://api.thesys.dev/v1/embed',
+    model=C1_MODEL,
+    streaming=True,
+)
+```
+
+Referência real: [llm_runner.py](mdc:backend/llm_runner.py).
+
+## Streaming com LangChain
+
+- Usar `.astream()` para streaming async — **não** `.invoke()` ou `.stream()` sync.
+- Iterar sobre chunks e chamar `write_content()` para cada chunk com conteúdo.
+- Verificar `isinstance(chunk.content, str) and chunk.content` antes de enviar.
+
+```python
+async for chunk in llm.astream(conversation_history):
+    if isinstance(chunk.content, str) and chunk.content:
+        await write_content(chunk.content)
+```
+
+## Mensagens e Histórico
+
+- Usar mensagens do LangChain: `HumanMessage`, `AIMessage`, `SystemMessage` de `langchain_core.messages`.
+- Armazenar no `ThreadStore` como `BaseMessage` do LangChain.
+- Converter prompt do request para `HumanMessage` antes de adicionar ao histórico.
+- Converter resposta do SDK para `AIMessage` após streaming.
+
+```python
+from langchain_core.messages import AIMessage, HumanMessage
+
+user_message = HumanMessage(content=chat_request.prompt['content'])
+# ... streaming ...
+assistant_message = AIMessage(content=assistant_response['content'])
+```
+
+Referência real: [thread_store.py](mdc:backend/thread_store.py) — `Message(TypedDict)` com `lc_message: BaseMessage`.
+
+## Agents e Tools (padrão futuro)
+
+- Definir tools com `@tool` decorator de `langchain_core.tools`.
+- Docstrings claras e descritivas (o LLM usa para decidir quando usar a tool).
+- Usar `create_openai_tools_agent` + `AgentExecutor` para agentes.
+- Prompts com `ChatPromptTemplate.from_messages()` incluindo `("placeholder", "{agent_scratchpad}")`.
+
+```python
+from langchain_core.tools import tool
+from langchain.agents import create_openai_tools_agent, AgentExecutor
+from langchain_core.prompts import ChatPromptTemplate
+
+@tool
+def execute_sql_query(query: str) -> str:
+    """Execute uma query SQL no banco de dados."""
+    # implementação...
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "Você é um assistente útil..."),
+    ("human", "{query}"),
+    ("placeholder", "{agent_scratchpad}"),
+])
+
+agent = create_openai_tools_agent(llm, tools, prompt)
+executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+```
+
+Conforme documentação: https://docs.thesys.dev/guides/frameworks/langchain
+
+## Anti-padrões
+
+- ❌ Usar `base_url` diferente de `https://api.thesys.dev/v1/embed`.
+- ❌ Hardcodar `api_key` no código (deve vir de env var).
+- ❌ Usar `.invoke()` para chat com streaming (usar `.astream()`).
+- ❌ Esquecer `streaming=True` no `ChatOpenAI`.
+- ❌ Modelos sem prefixo `c1/` (ex.: usar `claude-sonnet-4` em vez de `c1/anthropic/claude-sonnet-4/v-*`).
+- ❌ Misturar mensagens do OpenAI SDK com mensagens do LangChain.
+
+## Checklist
+
+- [ ] `ChatOpenAI` com `base_url` da C1 API.
+- [ ] `api_key` via `os.getenv('THESYS_API_KEY')`.
+- [ ] `streaming=True` habilitado.
+- [ ] Modelo com prefixo `c1/` centralizado em variável.
+- [ ] Streaming via `.astream()` com `write_content()`.
+- [ ] Mensagens como `HumanMessage`/`AIMessage` do LangChain.
+- [ ] Histórico armazenado no `ThreadStore` como `BaseMessage`.

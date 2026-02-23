@@ -1,0 +1,77 @@
+---
+alwaysApply: true
+description: Padrões de código Python do projeto backend.
+---
+
+# Padrões de Código Python — Backend
+
+## Objetivo
+
+Garantir código Python consistente, legível e tipado no backend, alinhado ao PEP 8, PEP 20, PEP 257, Google Python Style Guide e às configurações de Ruff/Pyright do projeto.
+
+## Regras
+
+### Estilo e Formatação (Ruff)
+
+- **Ruff** é o linter e formatter oficial do projeto — configurado em [pyproject.toml](mdc:backend/pyproject.toml).
+- Limite de linha: **79 caracteres** (`line-length = 79`).
+- Aspas: **single quotes** (`quote-style = 'single'`).
+- Regras ativas: `I` (isort), `F` (pyflakes), `E`/`W` (pycodestyle), `PL` (pylint), `PT` (pytest-style).
+- Regras ignoradas: `PLR2004`, `PLR0917`, `PLR0913`.
+- Sempre rode `ruff check` e `ruff format` antes de commitar.
+
+### Naming Conventions
+
+- `snake_case` para funções, variáveis e módulos.
+- `PascalCase` para classes (incluindo Pydantic models e TypedDict).
+- `UPPER_SNAKE_CASE` para constantes.
+- Prefixo `_` para variáveis/métodos privados.
+
+### Type Hints
+
+- **Todas** as funções e métodos devem ter type hints nos parâmetros e retorno.
+- Alinhado ao [pyrightconfig.json](mdc:pyrightconfig.json): `pythonVersion: 3.13`, `reportUnusedImport: warning`.
+- Prefira tipos nativos do Python 3.10+ (`list[str]`, `dict[str, int]`, `str | None`) em vez de `typing.List`, `typing.Dict`, `typing.Optional`.
+- Use `TypedDict` para dicts com estrutura fixa; `TypeAlias` para aliases de tipo.
+- Evite `Any` — prefira `Unknown` ou tipos concretos.
+
+### Imports
+
+- Ordem: stdlib → third-party → local (Ruff `I` cuida disso).
+- Imports absolutos sempre que possível.
+- Sem imports wildcard (`from x import *`).
+- Agrupe imports do mesmo pacote.
+
+### Docstrings (PEP 257)
+
+- Docstrings em todas as classes e funções públicas.
+- Formato: linha de resumo curta, depois `Args:`, `Returns:`, `Raises:` quando aplicável.
+- Use estilo Google para docstrings.
+
+### Boas Práticas
+
+- Use `f-strings` para interpolação de strings.
+- `async/await` para código assíncrono — não misture sync/async sem motivo.
+- Comprehensions com moderação — se ficar complexo, use loop explícito.
+- `dataclasses` para objetos de dados simples sem validação; `BaseModel` (Pydantic) quando precisar de validação.
+- Sem `print()` em produção — use `logging`.
+- Prefira `pathlib.Path` sobre `os.path`.
+
+## Anti-padrões
+
+- ❌ Código sem type hints.
+- ❌ Uso de `Any` sem justificativa.
+- ❌ `import *` (imports wildcard).
+- ❌ `print()` em código de produção.
+- ❌ Variáveis com nomes genéricos (`data`, `result`, `temp`, `x`).
+- ❌ Funções com mais de 50 linhas.
+- ❌ Ignorar warnings do Ruff/Pyright.
+
+## Checklist
+
+- [ ] Type hints em todos os parâmetros e retornos.
+- [ ] Docstrings nas classes e funções públicas.
+- [ ] `ruff check` e `ruff format` passando sem erros.
+- [ ] Imports organizados (stdlib → third-party → local).
+- [ ] Sem `print()` — usar `logging`.
+- [ ] Naming conventions respeitadas.

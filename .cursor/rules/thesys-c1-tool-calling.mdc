@@ -1,0 +1,111 @@
+---
+globs: backend/**/*.py
+description: "Tool calling com Thesys C1 via LangChain — definição de tools, agents e segurança."
+---
+# Thesys C1 — Tool Calling
+
+## Objetivo
+
+Padronizar a implementação de tool calling com C1 via LangChain, definindo padrões para tools, agents e segurança.
+
+## Definição de Tools
+
+- Usar `@tool` decorator de `langchain_core.tools`.
+- Docstrings claras e descritivas — **o LLM usa a docstring para decidir quando usar a tool**.
+- Tipagem de parâmetros e retorno obrigatória.
+- Cada tool com uma responsabilidade única e bem definida.
+
+```python
+from langchain_core.tools import tool
+
+@tool
+def buscar_dados_usuario(user_id: str) -> str:
+    """Busca informações detalhadas de um usuário pelo ID.
+
+    Args:
+        user_id: O identificador único do usuário.
+
+    Returns:
+        String com os dados do usuário formatados.
+    """
+    # implementação...
+    return f'Dados do usuário {user_id}: ...'
+
+@tool
+def execute_sql_query(query: str) -> str:
+    """Executa uma query SQL read-only no banco de dados.
+
+    Args:
+        query: A query SQL SELECT a ser executada.
+
+    Returns:
+        Resultados da query formatados como string.
+    """
+    # implementação com sanitização...
+    return 'resultados...'
+```
+
+## Agent Pattern
+
+- Combinar tools + prompt + model em `AgentExecutor`.
+- Usar `create_openai_tools_agent` para criar o agente.
+- `verbose=True` em desenvolvimento, `verbose=False` em produção.
+- Tratar erros de tools graciosamente.
+
+```python
+from langchain.agents import create_openai_tools_agent, AgentExecutor
+from langchain_core.prompts import ChatPromptTemplate
+
+tools = [buscar_dados_usuario, execute_sql_query]
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "Você é um assistente com acesso a dados..."),
+    ("human", "{query}"),
+    ("placeholder", "{agent_scratchpad}"),
+])
+
+agent = create_openai_tools_agent(llm, tools, prompt)
+executor = AgentExecutor(
+    agent=agent,
+    tools=tools,
+    verbose=True,  # False em produção
+    handle_parsing_errors=True,
+)
+```
+
+Conforme documentação: https://docs.thesys.dev/guides/integrate-data/tool-calling
+
+## Prompt Pattern para Tools
+
+- Incluir `("placeholder", "{agent_scratchpad}")` no template — **obrigatório** para o agente registrar raciocínio.
+- System prompt descrevendo capacidades e contexto.
+- Separação clara: system prompt (controlado pelo dev) vs user input.
+
+## Segurança
+
+- **SQL tools**: sanitizar queries; read-only quando possível; limitar resultados.
+- Nunca permitir que o usuário controle diretamente o system prompt.
+- Validar e sanitizar inputs antes de passar para tools.
+- Timeouts em tools que fazem I/O (DB, HTTP).
+- Logar execuções de tools para auditoria.
+
+## Anti-padrões
+
+- ❌ Tools sem docstring (o LLM não saberá quando usá-las).
+- ❌ Tools sem tipagem de parâmetros/retorno.
+- ❌ `verbose=True` em produção (expõe raciocínio interno).
+- ❌ SQL tools sem sanitização ou que permitem DELETE/UPDATE.
+- ❌ Tools que fazem I/O sem timeout.
+- ❌ Esquecer `("placeholder", "{agent_scratchpad}")` no prompt.
+- ❌ System prompts controláveis pelo usuário.
+
+## Checklist
+
+- [ ] Tools definidas com `@tool` decorator.
+- [ ] Docstrings claras e descritivas em todas as tools.
+- [ ] Tipagem de parâmetros e retorno.
+- [ ] `AgentExecutor` com `handle_parsing_errors=True`.
+- [ ] `("placeholder", "{agent_scratchpad}")` no prompt template.
+- [ ] `verbose=False` em produção.
+- [ ] Inputs de tools sanitizados e validados.
+- [ ] Timeouts em tools com I/O.

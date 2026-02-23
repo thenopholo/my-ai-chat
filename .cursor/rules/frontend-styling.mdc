@@ -1,0 +1,77 @@
+---
+globs: ui/src/**/*.tsx,ui/src/**/*.css
+---
+
+# Estilização — Frontend
+
+## Objetivo
+
+Padronizar a abordagem de estilização no frontend, documentando o estado atual (CSS puro) e boas práticas.
+
+## Estado Atual
+
+- **CSS puro** (sem Tailwind, sem CSS-in-JS, sem CSS Modules).
+- Reset CSS via CDN: `reset-css` — ver [index.html](mdc:ui/index.html).
+- Fonte **Inter** via Google Fonts.
+- Estilos globais em [index.css](mdc:ui/src/index.css).
+- Estilos do SDK de chat: `@crayonai/react-ui/styles/index.css` (importado em [App.tsx](mdc:ui/src/App.tsx)).
+
+## Regras
+
+### Organização de Estilos
+
+- Estilos globais em `src/index.css` (reset, tipografia, variáveis CSS).
+- Estilos de componente junto ao componente (ex.: `ChatMessage.css` ao lado de `ChatMessage.tsx`).
+- Use classes CSS descritivas (BEM ou similar): `.chat-message`, `.chat-message__content`, `.chat-message--user`.
+- Variáveis CSS (custom properties) para cores, espaçamentos e tipografia reutilizáveis.
+
+### Classes vs Inline Styles
+
+- **Prefira classes CSS** sobre inline styles.
+- Inline styles apenas para valores dinâmicos calculados em runtime.
+- Nunca use inline styles para layout ou tipografia estática.
+
+### Responsividade
+
+- Mobile-first: estilos base para mobile, media queries para telas maiores.
+- Use unidades relativas (`rem`, `em`, `%`, `vw/vh`) em vez de `px` fixo.
+- Breakpoints padronizados (definir como variáveis CSS ou constantes).
+
+### Acessibilidade Visual
+
+- Contraste mínimo de 4.5:1 para texto (WCAG AA).
+- Não dependa apenas de cor para transmitir informação.
+- Focus visible em elementos interativos.
+- Respeite `prefers-reduced-motion` e `prefers-color-scheme`.
+
+### Dark Mode
+
+- Se implementar dark mode, use variáveis CSS e `prefers-color-scheme`.
+- Defina tema claro como padrão, dark mode como opt-in ou por media query.
+
+## Evolução Futura
+
+- Se adotar **Tailwind CSS**: configurar `tailwind.config.ts`, usar classes utilitárias, remover CSS redundante.
+- Se adotar **CSS Modules**: renomear para `*.module.css`, importar como objeto.
+- Se adotar **styled-components/emotion**: definir theme provider, usar props tipadas.
+- Atualize esta rule ao mudar a abordagem de estilização.
+
+## Anti-padrões
+
+- ❌ Inline styles para layout estático.
+- ❌ Classes CSS genéricas (`div1`, `container2`, `style1`).
+- ❌ `!important` sem motivo claro.
+- ❌ Estilos em `<style>` tags no HTML.
+- ❌ Hardcodar cores/tamanhos em vez de usar variáveis CSS.
+- ❌ Media queries desktop-first.
+- ❌ Misturar abordagens de estilização (CSS puro + CSS-in-JS) sem motivo.
+
+## Checklist
+
+- [ ] Estilos globais em `index.css`.
+- [ ] Estilos de componente junto ao componente.
+- [ ] Classes CSS descritivas.
+- [ ] Variáveis CSS para valores reutilizáveis.
+- [ ] Responsividade mobile-first.
+- [ ] Contraste adequado (WCAG AA).
+- [ ] Sem inline styles para layout estático.

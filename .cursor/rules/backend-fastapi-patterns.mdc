@@ -1,0 +1,85 @@
+---
+globs: backend/**/*.py
+---
+
+# Padrões FastAPI — Backend
+
+## Objetivo
+
+Garantir uso consistente e idiomático do FastAPI no backend, seguindo as best practices oficiais e do projeto.
+
+## Regras
+
+### Routers e Endpoints
+
+- Use `APIRouter` para agrupar endpoints por domínio (ex.: `chat_router`, `health_router`).
+- Prefixos claros nos routers (ex.: `prefix="/chat"`).
+- Status codes explícitos: `status_code=200`, `status_code=201`, etc.
+- Endpoints `async def` para operações com I/O (HTTP, DB, LLM).
+- Endpoints `def` (sync) somente para operações puramente computacionais.
+
+### Dependency Injection
+
+- Use `Depends()` para injetar dependências (configurações, stores, serviços).
+- Extraia dependências complexas em funções separadas.
+- Nunca instancie dependências diretamente nos endpoints.
+
+### Request/Response Models
+
+- Use Pydantic `BaseModel` para request e response bodies.
+- Tipagem explícita nos parâmetros dos endpoints.
+- `response_model` declarado no decorator quando útil para documentação OpenAPI.
+
+### Middleware e CORS
+
+- Configure CORS com `CORSMiddleware` — origins explícitas, não usar `"*"` em produção.
+- Middleware de logging para rastrear requests.
+- Middleware custom via `@app.middleware("http")` quando necessário.
+
+### Streaming (SSE)
+
+- Use `StreamingResponse` para respostas de streaming.
+- Async generators para produzir chunks.
+- Integração com `thesys_genui_sdk` via `@with_c1_response()` e `write_content()` conforme padrão atual em [main.py](mdc:backend/main.py).
+
+### Error Handling
+
+- `HTTPException` para erros de domínio (400, 404, 422).
+- Exception handlers globais com `@app.exception_handler()` para respostas consistentes.
+- Nunca retornar stack traces em produção.
+
+### Configurações
+
+- Variáveis de ambiente via `.env` e `python-dotenv` (padrão atual).
+- Evolução recomendada: `pydantic-settings` com `BaseSettings` para validação tipada.
+- Nunca hardcodar API keys, URLs de serviços ou secrets.
+
+### Documentação
+
+- FastAPI gera OpenAPI/Swagger automaticamente — aproveite.
+- Docstrings nos endpoints aparecem na docs.
+- Use `tags` nos routers para organizar a documentação.
+- Use `summary` e `description` nos endpoints quando necessário.
+
+## Referência ao Projeto Atual
+
+- [main.py](mdc:backend/main.py): app FastAPI com endpoint `POST /chat` usando `@with_c1_response()`.
+- [llm_runner.py](mdc:backend/llm_runner.py): `ChatRequest` (Pydantic model) e `generate_stream` (lógica de streaming).
+
+## Anti-padrões
+
+- ❌ Endpoints sync para operações com I/O.
+- ❌ Lógica de negócio complexa diretamente no endpoint (extrair para services).
+- ❌ CORS com `allow_origins=["*"]` em produção.
+- ❌ Retornar `dict` genérico em vez de Pydantic model nos responses.
+- ❌ Silenciar exceções sem tratamento adequado.
+- ❌ Hardcodar configurações nos endpoints.
+
+## Checklist
+
+- [ ] Endpoints usam `async def` para I/O.
+- [ ] Request/response tipados com Pydantic models.
+- [ ] CORS configurado com origins explícitas.
+- [ ] Erros tratados com `HTTPException` ou exception handlers.
+- [ ] Configurações vindas de variáveis de ambiente.
+- [ ] Documentação OpenAPI aproveitada (docstrings, tags, summary).

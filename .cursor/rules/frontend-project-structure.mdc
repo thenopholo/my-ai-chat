@@ -1,0 +1,129 @@
+---
+globs: ui/src/**,ui/public/**
+---
+
+# Estrutura do Projeto — Frontend
+
+## Objetivo
+
+Definir a organização de diretórios, convenções de nomes e regras de imports do frontend React/TypeScript.
+
+## Estrutura Atual
+
+```
+ui/
+├── index.html              # HTML principal (Vite entry)
+├── package.json            # Dependências e scripts
+├── tsconfig.json           # Config TypeScript principal
+├── tsconfig.node.json      # Config TypeScript para Vite config
+├── vite.config.ts          # Configuração do Vite
+├── public/                 # Assets estáticos
+│   ├── favicon.ico
+│   ├── index.html          # (legado CRA — não usado pelo Vite)
+│   ├── manifest.json
+│   └── robots.txt
+└── src/
+    ├── App.tsx             # Componente raiz
+    ├── index.tsx           # Entry point React
+    ├── index.css           # Estilos globais
+    └── react-app-env.d.ts  # Declarações de tipo
+```
+
+Referências:
+- [App.tsx](mdc:ui/src/App.tsx) — componente raiz com `C1Chat`.
+- [index.tsx](mdc:ui/src/index.tsx) — entry point com `ReactDOM.createRoot`.
+- [index.html](mdc:ui/index.html) — HTML principal do Vite.
+- [vite.config.ts](mdc:ui/vite.config.ts) — config do Vite com proxy.
+
+## Estrutura Recomendada (quando o app crescer)
+
+```
+ui/src/
+├── App.tsx
+├── index.tsx
+├── index.css
+├── components/            # Componentes React reutilizáveis
+│   ├── chat/              # Componentes de chat
+│   │   ├── ChatMessage.tsx
+│   │   └── ChatInput.tsx
+│   └── ui/                # Componentes de UI genéricos
+│       ├── Button.tsx
+│       └── Modal.tsx
+├── hooks/                 # Custom hooks
+│   ├── useChat.ts
+│   └── useThread.ts
+├── services/              # Comunicação com APIs
+│   └── chatService.ts
+├── types/                 # Tipos e interfaces compartilhados
+│   └── chat.ts
+├── utils/                 # Funções utilitárias puras
+│   └── formatters.ts
+├── contexts/              # Context providers
+│   └── ThemeContext.tsx
+└── pages/                 # Páginas (se houver roteamento)
+    └── ChatPage.tsx
+```
+
+## Regras
+
+### Convenções de Nomes de Arquivos
+
+- `PascalCase.tsx` para componentes React (ex.: `ChatMessage.tsx`).
+- `camelCase.ts` para lógica pura, hooks, services, utils (ex.: `useChat.ts`, `chatService.ts`).
+- `camelCase.css` para estilos (ex.: `chatMessage.css`).
+- `index.ts` para barrel exports (re-exportar de uma pasta).
+
+### Onde Criar Novos Arquivos
+
+| Tipo | Diretório | Extensão |
+|---|---|---|
+| Componente React | `src/components/` | `.tsx` |
+| Custom hook | `src/hooks/` | `.ts` |
+| Service/API | `src/services/` | `.ts` |
+| Tipo/interface | `src/types/` | `.ts` |
+| Utilitário | `src/utils/` | `.ts` |
+| Context provider | `src/contexts/` | `.tsx` |
+| Página/view | `src/pages/` | `.tsx` |
+| Estilo | junto ao componente | `.css` |
+
+### Regras de Import
+
+- Imports relativos dentro de `src/` (ex.: `import { useChat } from '../hooks/useChat'`).
+- Ordem de imports: React → libs externas → componentes → hooks → services → types → estilos.
+- Sem imports circulares.
+- Evolução: configurar alias de path no Vite (`@/` → `src/`) para imports absolutos.
+
+## Exemplos Curtos
+
+```tsx
+// ✅ Import organizado
+import React, { useState } from 'react';
+import { C1Chat } from '@thesysai/genui-sdk';
+import { ChatMessage } from '../components/chat/ChatMessage';
+import { useChat } from '../hooks/useChat';
+import type { Message } from '../types/chat';
+import './ChatPage.css';
+
+// ❌ Import desorganizado
+import './ChatPage.css';
+import { useChat } from '../hooks/useChat';
+import React from 'react';
+import { ChatMessage } from '../components/chat/ChatMessage';
+```
+
+## Anti-padrões
+
+- ❌ Tudo em um único arquivo gigante.
+- ❌ Componentes em arquivos `.ts` (deve ser `.tsx`).
+- ❌ Lógica pura em arquivos `.tsx` (deve ser `.ts`).
+- ❌ Nomes genéricos (`Utils.ts`, `Helpers.ts`) sem escopo.
+- ❌ Imports circulares entre módulos.
+- ❌ Assets estáticos dentro de `src/` (usar `public/`).
+
+## Checklist
+
+- [ ] Arquivos seguem convenção de nomes (PascalCase/camelCase).
+- [ ] Cada componente em seu próprio arquivo.
+- [ ] Imports organizados e sem circulares.
+- [ ] Novos arquivos no diretório correto.
+- [ ] Estilos próximos aos componentes que os usam.
